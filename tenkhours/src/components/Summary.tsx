@@ -48,8 +48,6 @@ export default function Summary() {
         years.add(parseInt(year));
       });
       
-      console.log('Available years:', Array.from(years));
-      
       // If no data exists for current year, add it to available years
       if (!years.has(selectedYear)) {
         years.add(selectedYear);
@@ -68,39 +66,31 @@ export default function Summary() {
         hours: 0
       }));
 
-      // Calculate monthly breakdown by activity
+      // Get current month and year
+      const currentDate = new Date();
+      const currentMonthIndex = currentDate.getMonth();
+
+      // Use the same logic as pie chart and summary - just use activities' totalTime
+      if (selectedYear === currentDate.getFullYear()) {
+        const totalMinutes = activitiesData.reduce((sum, activity) => sum + activity.totalTime, 0);
+        monthlyData[currentMonthIndex].hours = totalMinutes / 60;
+      }
+
+      // For tooltips, use the same data
       const breakdown: { [key: string]: { [activityId: string]: number } } = {};
-      const logs = await getTimeLogs();
+      const currentMonth = months[currentMonthIndex];
+      const key = `${selectedYear}-${currentMonth}`;
       
-      logs.forEach(log => {
-        const date = new Date(log.timestamp);
-        const year = date.getFullYear();
-        const month = months[date.getMonth()];
-        const key = `${year}-${month}`;
-        
-        if (year === selectedYear) {
-          if (!breakdown[key]) {
-            breakdown[key] = {};
-          }
-          breakdown[key][log.activityId] = (breakdown[key][log.activityId] || 0) + log.duration;
+      breakdown[key] = {};
+      activitiesData.forEach(activity => {
+        if (activity.totalTime > 0) {
+          breakdown[key][activity.id] = activity.totalTime;
         }
       });
       
-      setMonthlyBreakdown(breakdown);
-
-      // Fill in actual data from time logs
-      summary.monthlyData.forEach(data => {
-        const [year, month] = data.month.split('-');
-        if (parseInt(year) === selectedYear) {
-          const monthIndex = parseInt(month) - 1;
-          if (monthIndex >= 0 && monthIndex < 12) {
-            monthlyData[monthIndex].hours = Math.round(data.minutes / 60);
-          }
-        }
-      });
-
       console.log('Monthly data for chart:', monthlyData);
       setMonthlyHours(monthlyData);
+      setMonthlyBreakdown(breakdown);
     };
     loadData();
   }, [selectedYear]);
@@ -134,18 +124,17 @@ export default function Summary() {
             const breakdown = monthlyBreakdown[monthKey];
             
             if (!breakdown) {
-              return `Total: ${context.raw}H`;
+              return `Total: ${Number(context.raw).toFixed(2)}H`;
             }
             
-            const labels = [`Total: ${context.raw}H`];
+            const labels = [`Total: ${Number(context.raw).toFixed(2)}H`];
             
             // Add breakdown by activity
             activities.forEach(activity => {
               const minutes = breakdown[activity.id] || 0;
               if (minutes > 0) {
-                const hours = Math.floor(minutes / 60);
-                const mins = minutes % 60;
-                labels.push(`${activity.name}: ${hours}h ${mins}m`);
+                const hours = minutes / 60;
+                labels.push(`${activity.name}: ${hours.toFixed(2)}h`);
               }
             });
             
@@ -161,7 +150,7 @@ export default function Summary() {
         ticks: {
           callback: function(tickValue: number | string) {
             const value = Number(tickValue);
-            return isNaN(value) ? tickValue : `${value}H`;
+            return isNaN(value) ? tickValue : `${value.toFixed(2)}H`;
           },
         },
         grid: {
@@ -221,16 +210,12 @@ export default function Summary() {
           <div className="text-center">
             <div className="text-4xl font-bold text-blue-500">
               {activities.reduce((total, activity) => {
-                const hours = Math.floor(activity.totalTime / 60);
-                return total + hours;
-              }, 0)}
+                return total + activity.totalTime;
+              }, 0) >= 60 ? Math.floor(activities.reduce((total, activity) => total + activity.totalTime, 0) / 60) : 0}
               <span className="text-2xl ml-1">Hours</span>
             </div>
             <div className="text-gray-600 mt-1">
-              {activities.reduce((total, activity) => {
-                const minutes = activity.totalTime % 60;
-                return total + minutes;
-              }, 0)}
+              {activities.reduce((total, activity) => total + activity.totalTime, 0) % 60}
               <span className="ml-1">Minutes</span>
             </div>
           </div>
