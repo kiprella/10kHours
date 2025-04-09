@@ -36,9 +36,9 @@ yarn install
 
 3. Start the development server:
 ```bash
-npm run dev
+npm run dev:4000
 # or
-yarn dev
+yarn dev:4000
 ```
 
 4. Open [http://localhost:3000](http://localhost:3000) in your browser to see the application.
