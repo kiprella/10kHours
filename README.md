@@ -56,12 +56,6 @@ The application uses JSON file-based storage in the `src/data` directory:
 - `activities.json` - Stores activity definitions
 - `timeLogs.json` - Stores completed time sessions
 
-## Development
-
-- Run tests: `npm test`
-- Build for production: `npm run build`
-- Start production server: `npm start`
-
 
 ## License
 
