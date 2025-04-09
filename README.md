@@ -3,6 +3,9 @@
 
 10kHours - application designed to help you monitor your progress towards mastery in any skill with charts like line and pie. 
 
+
+![image](https://github.com/user-attachments/assets/21fb1482-2753-456a-b9ff-4fdc477e7478)
+
 ## Features
 
 - 🎯 Track multiple activities/skills
