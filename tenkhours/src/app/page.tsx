@@ -9,7 +9,7 @@ import { Activity, TimerSettings, TimeLog as TimeLogType } from '@/types';
 import { saveTimeLog, updateActivityTotalTime } from '@/utils/storage';
 
 const DEFAULT_SETTINGS: TimerSettings = {
-  focusDuration: 0.1,
+  focusDuration: 45,
 };
 
 export default function Home() {

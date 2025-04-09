@@ -12,10 +12,11 @@ if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
-// Ensure JSON files exist
+// Initialize empty files if they don't exist
 if (!fs.existsSync(ACTIVITIES_FILE)) {
   fs.writeFileSync(ACTIVITIES_FILE, '[]');
 }
+
 if (!fs.existsSync(TIME_LOGS_FILE)) {
   fs.writeFileSync(TIME_LOGS_FILE, '[]');
 }
