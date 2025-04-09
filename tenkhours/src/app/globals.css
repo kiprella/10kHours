@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Kreon:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
 @tailwind base;
 @tailwind components;
@@ -22,6 +23,10 @@
 }
 
 :root {
+  --color-primary: #4F46E5;
+  --color-secondary-green: #34D399;
+  --color-secondary-blue: #60A5FA;
+  --color-secondary-orange: #FFB443;
   --background: #ffffff;
   --foreground: #171717;
   --font-bookish: 'Bookish', serif;
@@ -44,6 +49,48 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-kreon);
+  font-family: 'Kreon', serif;
   font-weight: 300;
+}
+
+@layer components {
+  .card {
+    @apply bg-white rounded-lg shadow-md p-6 transition-shadow duration-200 hover:shadow-lg;
+  }
+  
+  .btn-primary {
+    @apply bg-[#4F46E5] text-white px-6 py-2 rounded-lg font-medium 
+           hover:bg-[#4338CA] transition-colors duration-200
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  
+  .btn-secondary {
+    @apply bg-gray-100 text-gray-700 px-6 py-2 rounded-lg font-medium
+           hover:bg-gray-200 transition-colors duration-200;
+  }
+  
+  .heading-lg {
+    @apply text-3xl font-bold text-gray-900 mb-6;
+  }
+  
+  .heading-md {
+    @apply text-xl font-semibold text-gray-800 mb-4;
+  }
+}
+
+.chart-container {
+  @apply rounded-lg p-4 bg-white shadow-sm;
+}
+
+.activity-tag {
+  @apply px-4 py-2 rounded-full font-medium transition-all duration-200
+         hover:shadow-md active:scale-95;
+}
+
+.activity-tag.selected {
+  @apply bg-[#4F46E5] text-white shadow-md;
+}
+
+.activity-tag.unselected {
+  @apply bg-gray-100 text-gray-700 hover:bg-gray-200;
 }

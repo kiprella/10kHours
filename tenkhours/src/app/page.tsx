@@ -15,54 +15,66 @@ const DEFAULT_SETTINGS: TimerSettings = {
 export default function Home() {
   const [selectedActivity, setSelectedActivity] = useState<Activity | undefined>();
 
-  const handleTimerComplete = () => {
+  const handleTimerComplete = (duration: number) => {
     if (!selectedActivity) return;
 
     const log: TimeLogType = {
       id: crypto.randomUUID(),
       activityId: selectedActivity.id,
-      duration: DEFAULT_SETTINGS.focusDuration,
+      duration: duration,
       timestamp: Date.now(),
     };
 
     saveTimeLog(log);
-    updateActivityTotalTime(selectedActivity.id, log.duration);
+    updateActivityTotalTime(selectedActivity.id, duration);
   };
 
   return (
-    <main className="min-h-screen p-8 max-w-4xl mx-auto">
-      <h1 className="text-3xl font-bold mb-8">Pomodoro Timer</h1>
-      
-      <div className="space-y-8">
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-xl font-semibold mb-4">Select Activity</h2>
-          <ActivityTag
-            onSelect={setSelectedActivity}
-            selectedActivity={selectedActivity}
-          />
+    <div className="min-h-screen bg-gray-50">
+      <header className="bg-white shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
+          <h1 className="heading-lg mb-0">10k Hours</h1>
         </div>
+      </header>
 
-        {selectedActivity && (
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h2 className="text-xl font-semibold mb-4">Timer</h2>
-            <Timer
-              settings={DEFAULT_SETTINGS}
-              activity={selectedActivity}
-              onComplete={handleTimerComplete}
-            />
+      <main className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Left Column - Timer Section */}
+          <div className="space-y-6">
+            <section className="card">
+              <h2 className="heading-md">Select Activity</h2>
+              <ActivityTag
+                onSelect={setSelectedActivity}
+                selectedActivity={selectedActivity}
+              />
+            </section>
+
+            {selectedActivity && (
+              <section className="card">
+                <h2 className="heading-md">Timer</h2>
+                <Timer
+                  settings={DEFAULT_SETTINGS}
+                  activity={selectedActivity}
+                  onComplete={handleTimerComplete}
+                />
+              </section>
+            )}
+
+            <section className="card">
+              <h2 className="heading-md">Recent Activity</h2>
+              <TimeLog />
+            </section>
           </div>
-        )}
 
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-xl font-semibold mb-4">Activity Summary</h2>
-          <TimeLog />
+          {/* Right Column - Statistics Section */}
+          <div className="space-y-6">
+            <section className="card">
+              <h2 className="heading-md">Focus Statistics</h2>
+              <Summary />
+            </section>
+          </div>
         </div>
-
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-xl font-semibold mb-4">Focus Statistics</h2>
-          <Summary />
-        </div>
-      </div>
-    </main>
+      </main>
+    </div>
   );
 }

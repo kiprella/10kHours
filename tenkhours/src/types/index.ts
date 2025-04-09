@@ -1,14 +1,16 @@
-export type Activity = {
+export interface Activity {
   id: string;
   name: string;
   totalTime: number; // in minutes
-};
+  color: string;
+}
 
 export type TimerState = 'idle' | 'running' | 'paused';
 
-export type TimerSettings = {
+export interface TimerSettings {
   focusDuration: number; // in minutes
-};
+  selectedDuration?: number;
+}
 
 export type TimeLog = {
   id: string;
