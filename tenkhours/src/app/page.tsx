@@ -43,10 +43,7 @@ export default function Home() {
           <div className="space-y-6">
             <section className="card">
               <h2 className="heading-md">Select Activity</h2>
-              <ActivityTag
-                onSelect={setSelectedActivity}
-                selectedActivity={selectedActivity}
-              />
+              <ActivityTag onSelectActivity={setSelectedActivity} />
             </section>
 
             {selectedActivity && (

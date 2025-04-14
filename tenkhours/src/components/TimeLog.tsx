@@ -4,14 +4,26 @@ import { getActivities } from '@/utils/storage';
 
 export default function TimeLog() {
   const [activities, setActivities] = useState<Activity[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const loadActivities = async () => {
-      const activitiesData = await getActivities();
-      setActivities(activitiesData);
-    };
     loadActivities();
   }, []);
+
+  const loadActivities = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const activitiesData = await getActivities();
+      setActivities(activitiesData);
+    } catch (error) {
+      console.error('Error loading activities:', error);
+      setError('Failed to load activities');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const formatTime = (minutes: number): string => {
     const hours = Math.floor(minutes / 60);
@@ -21,19 +33,32 @@ export default function TimeLog() {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-xl font-semibold">Time Summary</h2>
+      <h2 className="text-xl font-semibold text-slate-800">Time Summary</h2>
+      {error && (
+        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-600">
+          {error}
+        </div>
+      )}
       <div className="space-y-2">
-        {activities.map((activity) => (
-          <div
-            key={activity.id}
-            className="flex justify-between items-center p-3 bg-gray-50 rounded"
-          >
-            <span className="font-medium">{activity.name}</span>
-            <span className="text-gray-600">{formatTime(activity.totalTime)}</span>
+        {isLoading ? (
+          <div className="flex justify-center p-4">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div>
           </div>
-        ))}
-        {activities.length === 0 && (
-          <p className="text-gray-500">No activities logged yet</p>
+        ) : (
+          <>
+            {activities.map((activity) => (
+              <div
+                key={activity.id}
+                className="flex justify-between items-center p-3 bg-slate-50 rounded-lg border border-slate-200"
+              >
+                <span className="font-medium text-slate-800">{activity.name}</span>
+                <span className="text-slate-600">{formatTime(activity.totalTime)}</span>
+              </div>
+            ))}
+            {activities.length === 0 && (
+              <p className="text-slate-500">No activities logged yet</p>
+            )}
+          </>
         )}
       </div>
     </div>

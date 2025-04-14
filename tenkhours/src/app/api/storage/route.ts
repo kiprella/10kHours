@@ -69,4 +69,49 @@ export async function POST(request: Request) {
     console.error('Error saving data:', error);
     return NextResponse.json({ error: 'Failed to save data' }, { status: 500 });
   }
+}
+
+export async function PUT(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const type = searchParams.get('type');
+  const id = searchParams.get('id');
+  const data = await request.json();
+
+  try {
+    if (type === 'activities' && id) {
+      const activities = JSON.parse(fs.readFileSync(ACTIVITIES_FILE, 'utf-8'));
+      const index = activities.findIndex((a: Activity) => a.id === id);
+      
+      if (index >= 0) {
+        activities[index] = data;
+        fs.writeFileSync(ACTIVITIES_FILE, JSON.stringify(activities, null, 2));
+        return NextResponse.json({ success: true });
+      } else {
+        return NextResponse.json({ error: 'Activity not found' }, { status: 404 });
+      }
+    }
+    return NextResponse.json({ error: 'Invalid type or missing id' }, { status: 400 });
+  } catch (error) {
+    console.error('Error updating data:', error);
+    return NextResponse.json({ error: 'Failed to update data' }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const type = searchParams.get('type');
+  const id = searchParams.get('id');
+
+  try {
+    if (type === 'activities' && id) {
+      const activities = JSON.parse(fs.readFileSync(ACTIVITIES_FILE, 'utf-8'));
+      const filteredActivities = activities.filter((a: Activity) => a.id !== id);
+      fs.writeFileSync(ACTIVITIES_FILE, JSON.stringify(filteredActivities, null, 2));
+      return NextResponse.json({ success: true });
+    }
+    return NextResponse.json({ error: 'Invalid type or missing id' }, { status: 400 });
+  } catch (error) {
+    console.error('Error deleting data:', error);
+    return NextResponse.json({ error: 'Failed to delete data' }, { status: 500 });
+  }
 } 

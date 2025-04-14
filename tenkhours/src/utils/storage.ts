@@ -67,4 +67,30 @@ export const updateActivityTotalTime = async (activityId: string, duration: numb
   } catch (error) {
     console.error('Error updating activity total time:', error);
   }
+};
+
+export const updateActivity = async (activity: Activity): Promise<void> => {
+  try {
+    const response = await fetch(`/api/storage?type=activities&id=${activity.id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(activity),
+    });
+    if (!response.ok) throw new Error('Failed to update activity');
+  } catch (error) {
+    console.error('Error updating activity:', error);
+  }
+};
+
+export const deleteActivity = async (activityId: string): Promise<void> => {
+  try {
+    const response = await fetch(`/api/storage?type=activities&id=${activityId}`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) throw new Error('Failed to delete activity');
+  } catch (error) {
+    console.error('Error deleting activity:', error);
+  }
 }; 
