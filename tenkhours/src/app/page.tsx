@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Timer from '@/components/Timer';
 import ActivityTag from '@/components/ActivityTag';
-import TimeLog from '@/components/TimeLog';
+import RecentActivity from '@/components/RecentActivity';
 import Summary from '@/components/Summary';
 import { Activity, TimerSettings, TimeLog as TimeLogType } from '@/types';
 import { saveTimeLog, updateActivityTotalTime } from '@/utils/storage';
@@ -58,8 +58,7 @@ export default function Home() {
             )}
 
             <section className="card">
-              <h2 className="heading-md">Recent Activity</h2>
-              <TimeLog />
+              <RecentActivity />
             </section>
           </div>
 

@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import { Activity, TimeLog, TimerSettings } from '@/types';
-import { saveTimeLog } from '@/utils/storage';
 
 interface TimerProps {
   settings: TimerSettings;
@@ -61,17 +60,9 @@ export default function Timer({ settings, activity, onComplete }: TimerProps) {
   const handleComplete = async (actualDuration: number) => {
     try {
       setIsLoading(true);
-      const timeLog: TimeLog = {
-        id: crypto.randomUUID(),
-        activityId: activity.id,
-        duration: actualDuration,
-        timestamp: Date.now(),
-      };
-
-      await saveTimeLog(timeLog);
       onComplete(actualDuration);
     } catch (error) {
-      console.error('Error saving time log:', error);
+      console.error('Error completing timer:', error);
     } finally {
       setIsLoading(false);
     }

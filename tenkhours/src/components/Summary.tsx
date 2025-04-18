@@ -175,8 +175,14 @@ export default function Summary() {
     },
   } as const;
 
+  const formatTime = (minutes: number): string => {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return `${hours}h ${mins}m`;
+  };
+
   const pieChartData = {
-    labels: activities.map(a => a.name),
+    labels: activities.map(a => `${a.name} (${formatTime(a.totalTime)})`),
     datasets: [
       {
         data: activities.map(a => a.totalTime),
@@ -196,7 +202,16 @@ export default function Summary() {
     maintainAspectRatio: false,
     plugins: {
       legend: {
-        display: false,
+        display: true,
+        position: 'right' as const,
+        align: 'center' as const,
+        labels: {
+          usePointStyle: true,
+          padding: 20,
+          font: {
+            size: 12
+          }
+        }
       },
       tooltip: {
         callbacks: {
@@ -204,7 +219,8 @@ export default function Summary() {
             const value = context.raw;
             const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
             const percentage = ((value / total) * 100).toFixed(0);
-            return `${percentage}%`;
+            const label = context.label || '';
+            return `${label} (${percentage}%)`;
           },
         },
       },
