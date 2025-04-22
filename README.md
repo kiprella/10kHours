@@ -1,7 +1,6 @@
 "The key to achieving true expertise in any skill is simply a matter of practicing, albeit in the correct way, for at least 10 000 hours" - Malcolm Gladwell's 
  
 
-10kHours - application designed to help you monitor your progress towards mastery in any skill with charts like line and pie. 
 
 
 ![image](https://github.com/user-attachments/assets/4a79c758-f9a9-416f-9916-b64cf414690f)
