@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Activity } from '@/types';
 import { getActivities } from '@/utils/storage';
+import Skeleton from './Skeleton';
 
 export default function TimeLog() {
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -31,6 +32,17 @@ export default function TimeLog() {
     return `${hours}h ${mins}m`;
   };
 
+  const LoadingSkeleton = () => (
+    <div className="space-y-2">
+      {[1, 2, 3].map((i) => (
+        <div key={i} className="flex justify-between items-center p-3 bg-slate-50 rounded-lg border border-slate-200">
+          <Skeleton variant="text" width={140} />
+          <Skeleton variant="text" width={80} />
+        </div>
+      ))}
+    </div>
+  );
+
   return (
     <div className="space-y-4">
       <h2 className="text-xl font-semibold text-slate-800">Time Summary</h2>
@@ -41,9 +53,7 @@ export default function TimeLog() {
       )}
       <div className="space-y-2">
         {isLoading ? (
-          <div className="flex justify-center p-4">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div>
-          </div>
+          <LoadingSkeleton />
         ) : (
           <>
             {activities.map((activity) => (

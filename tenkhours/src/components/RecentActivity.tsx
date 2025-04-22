@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { TimeLog, Activity } from '@/types';
 import { getTimeLogs, getActivities } from '@/utils/storage';
+import Skeleton from './Skeleton';
 
 export default function RecentActivity() {
   const [timeLogs, setTimeLogs] = useState<TimeLog[]>([]);
@@ -65,6 +66,20 @@ export default function RecentActivity() {
     });
   };
 
+  const LoadingSkeleton = () => (
+    <div className="space-y-2">
+      {[1, 2, 3, 4].map((i) => (
+        <div key={i} className="flex justify-between items-center p-3 bg-slate-50 rounded-lg border border-slate-200">
+          <div className="space-y-2">
+            <Skeleton variant="text" width={120} className="mb-1" />
+            <Skeleton variant="text" width={80} height={12} />
+          </div>
+          <Skeleton variant="text" width={60} />
+        </div>
+      ))}
+    </div>
+  );
+
   return (
     <div className="space-y-4">
       <h2 className="text-xl font-semibold text-slate-800">Recent Activity</h2>
@@ -75,9 +90,7 @@ export default function RecentActivity() {
       )}
       <div className="space-y-2">
         {isLoading ? (
-          <div className="flex justify-center p-4">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div>
-          </div>
+          <LoadingSkeleton />
         ) : (
           <>
             {timeLogs.map((log) => {
