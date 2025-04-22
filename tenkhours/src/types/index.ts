@@ -5,7 +5,26 @@ export interface Activity {
   color: string;
 }
 
-export type TimerState = 'idle' | 'running' | 'paused';
+export interface Goal {
+  id: string;
+  name: string;
+  targetHours: number;
+  activityId: string;
+  createdAt: number;
+  completedAt?: number;
+  description?: string;
+}
+
+export interface TimerState {
+  activityId: string | null;
+  startTime: number | null;
+  pausedTime: number | null;
+  totalPausedTime: number;
+  selectedDuration: number;
+  timeLeft: number;
+  isRunning: boolean;
+  isPaused: boolean;
+}
 
 export interface TimerSettings {
   focusDuration: number; // in minutes

@@ -1,117 +1,172 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { Activity, TimeLog, Goal, TimerState } from '@/types';
 import fs from 'fs';
 import path from 'path';
-import { Activity, TimeLog } from '@/types';
 
 const DATA_DIR = path.join(process.cwd(), 'src', 'data');
 const ACTIVITIES_FILE = path.join(DATA_DIR, 'activities.json');
 const TIME_LOGS_FILE = path.join(DATA_DIR, 'timeLogs.json');
+const GOALS_FILE = path.join(DATA_DIR, 'goals.json');
+const TIMER_STATE_FILE = path.join(DATA_DIR, 'timerState.json');
 
-// Ensure data directory exists
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-}
+// Helper function to get storage data
+const getStorageData = (type: string): any[] | any => {
+  try {
+    let filePath;
+    switch (type) {
+      case 'activities':
+        filePath = ACTIVITIES_FILE;
+        break;
+      case 'timeLogs':
+        filePath = TIME_LOGS_FILE;
+        break;
+      case 'goals':
+        filePath = GOALS_FILE;
+        break;
+      case 'timerState':
+        filePath = TIMER_STATE_FILE;
+        if (!fs.existsSync(filePath)) {
+          fs.writeFileSync(filePath, 'null', 'utf8');
+          return null;
+        }
+        const timerData = fs.readFileSync(filePath, 'utf8');
+        return timerData === 'null' ? null : JSON.parse(timerData);
+      default:
+        throw new Error('Invalid storage type');
+    }
 
-// Initialize empty files if they don't exist
-if (!fs.existsSync(ACTIVITIES_FILE)) {
-  fs.writeFileSync(ACTIVITIES_FILE, '[]');
-}
+    if (!fs.existsSync(filePath)) {
+      fs.writeFileSync(filePath, '[]', 'utf8');
+      return [];
+    }
 
-if (!fs.existsSync(TIME_LOGS_FILE)) {
-  fs.writeFileSync(TIME_LOGS_FILE, '[]');
-}
+    const data = fs.readFileSync(filePath, 'utf8');
+    return JSON.parse(data);
+  } catch (error) {
+    console.error(`Error reading ${type} data:`, error);
+    return type === 'timerState' ? null : [];
+  }
+};
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const type = searchParams.get('type');
+// Helper function to save storage data
+const setStorageData = (type: string, data: any[] | any): void => {
+  try {
+    let filePath;
+    switch (type) {
+      case 'activities':
+        filePath = ACTIVITIES_FILE;
+        break;
+      case 'timeLogs':
+        filePath = TIME_LOGS_FILE;
+        break;
+      case 'goals':
+        filePath = GOALS_FILE;
+        break;
+      case 'timerState':
+        filePath = TIMER_STATE_FILE;
+        break;
+      default:
+        throw new Error('Invalid storage type');
+    }
+
+    // Ensure the directory exists
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+
+    const content = type === 'timerState' && data === null ? 'null' : JSON.stringify(data, null, 2);
+    fs.writeFileSync(filePath, content, 'utf8');
+  } catch (error) {
+    console.error(`Error writing ${type} data:`, error);
+    throw error;
+  }
+};
+
+export async function GET(request: NextRequest) {
+  const type = request.nextUrl.searchParams.get('type');
+  if (!type) {
+    return NextResponse.json({ error: 'Type parameter is required' }, { status: 400 });
+  }
 
   try {
-    if (type === 'activities') {
-      const data = fs.readFileSync(ACTIVITIES_FILE, 'utf-8');
-      return NextResponse.json(JSON.parse(data));
-    } else if (type === 'timeLogs') {
-      const data = fs.readFileSync(TIME_LOGS_FILE, 'utf-8');
-      return NextResponse.json(JSON.parse(data));
-    }
-    return NextResponse.json({ error: 'Invalid type' }, { status: 400 });
+    const data = getStorageData(type);
+    return NextResponse.json(data);
   } catch (error) {
-    console.error('Error reading data:', error);
-    return NextResponse.json({ error: 'Failed to read data' }, { status: 500 });
+    console.error('GET error:', error);
+    return NextResponse.json({ error: 'Failed to fetch data' }, { status: 500 });
   }
 }
 
-export async function POST(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const type = searchParams.get('type');
-  const data = await request.json();
+export async function POST(request: NextRequest) {
+  const type = request.nextUrl.searchParams.get('type');
+  if (!type) {
+    return NextResponse.json({ error: 'Type parameter is required' }, { status: 400 });
+  }
 
   try {
-    if (type === 'activities') {
-      const activities = JSON.parse(fs.readFileSync(ACTIVITIES_FILE, 'utf-8'));
-      const existingIndex = activities.findIndex((a: Activity) => a.id === data.id);
-      
-      if (existingIndex >= 0) {
-        activities[existingIndex] = data;
-      } else {
-        activities.push(data);
-      }
-      
-      fs.writeFileSync(ACTIVITIES_FILE, JSON.stringify(activities, null, 2));
-      return NextResponse.json({ success: true });
-    } else if (type === 'timeLogs') {
-      const logs = JSON.parse(fs.readFileSync(TIME_LOGS_FILE, 'utf-8'));
-      logs.push(data);
-      fs.writeFileSync(TIME_LOGS_FILE, JSON.stringify(logs, null, 2));
-      return NextResponse.json({ success: true });
+    const newItem = await request.json();
+    if (type === 'timerState') {
+      setStorageData(type, newItem);
+      return NextResponse.json(newItem);
     }
-    return NextResponse.json({ error: 'Invalid type' }, { status: 400 });
+    const items = getStorageData(type);
+    items.push(newItem);
+    setStorageData(type, items);
+    return NextResponse.json(newItem);
   } catch (error) {
-    console.error('Error saving data:', error);
+    console.error('POST error:', error);
     return NextResponse.json({ error: 'Failed to save data' }, { status: 500 });
   }
 }
 
-export async function PUT(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const type = searchParams.get('type');
-  const id = searchParams.get('id');
-  const data = await request.json();
+export async function PUT(request: NextRequest) {
+  const type = request.nextUrl.searchParams.get('type');
+  const id = request.nextUrl.searchParams.get('id');
+  if (!type) {
+    return NextResponse.json({ error: 'Type parameter is required' }, { status: 400 });
+  }
 
   try {
-    if (type === 'activities' && id) {
-      const activities = JSON.parse(fs.readFileSync(ACTIVITIES_FILE, 'utf-8'));
-      const index = activities.findIndex((a: Activity) => a.id === id);
-      
-      if (index >= 0) {
-        activities[index] = data;
-        fs.writeFileSync(ACTIVITIES_FILE, JSON.stringify(activities, null, 2));
-        return NextResponse.json({ success: true });
-      } else {
-        return NextResponse.json({ error: 'Activity not found' }, { status: 404 });
-      }
+    const updatedItem = await request.json();
+    if (type === 'timerState') {
+      setStorageData(type, updatedItem);
+      return NextResponse.json(updatedItem);
     }
-    return NextResponse.json({ error: 'Invalid type or missing id' }, { status: 400 });
+    if (!id) {
+      return NextResponse.json({ error: 'ID parameter is required' }, { status: 400 });
+    }
+    const items = getStorageData(type);
+    const index = items.findIndex((item: any) => item.id === id);
+    if (index === -1) {
+      return NextResponse.json({ error: 'Item not found' }, { status: 404 });
+    }
+    items[index] = updatedItem;
+    setStorageData(type, items);
+    return NextResponse.json(updatedItem);
   } catch (error) {
-    console.error('Error updating data:', error);
+    console.error('PUT error:', error);
     return NextResponse.json({ error: 'Failed to update data' }, { status: 500 });
   }
 }
 
-export async function DELETE(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const type = searchParams.get('type');
-  const id = searchParams.get('id');
+export async function DELETE(request: NextRequest) {
+  const type = request.nextUrl.searchParams.get('type');
+  const id = request.nextUrl.searchParams.get('id');
+  if (!type || !id) {
+    return NextResponse.json({ error: 'Type and ID parameters are required' }, { status: 400 });
+  }
 
   try {
-    if (type === 'activities' && id) {
-      const activities = JSON.parse(fs.readFileSync(ACTIVITIES_FILE, 'utf-8'));
-      const filteredActivities = activities.filter((a: Activity) => a.id !== id);
-      fs.writeFileSync(ACTIVITIES_FILE, JSON.stringify(filteredActivities, null, 2));
+    if (type === 'timerState') {
+      setStorageData(type, null);
       return NextResponse.json({ success: true });
     }
-    return NextResponse.json({ error: 'Invalid type or missing id' }, { status: 400 });
+    const items = getStorageData(type);
+    const filteredItems = items.filter((item: any) => item.id !== id);
+    setStorageData(type, filteredItems);
+    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error deleting data:', error);
+    console.error('DELETE error:', error);
     return NextResponse.json({ error: 'Failed to delete data' }, { status: 500 });
   }
 } 

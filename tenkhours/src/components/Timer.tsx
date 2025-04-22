@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { Activity, TimeLog, TimerSettings } from '@/types';
+import { Activity, TimeLog, TimerSettings, TimerState } from '@/types';
+import { saveTimeLog, updateActivityTotalTime, getTimerState, saveTimerState } from '@/utils/storage';
 import Skeleton from './Skeleton';
 
 interface TimerProps {
@@ -9,22 +10,90 @@ interface TimerProps {
 }
 
 export default function Timer({ settings, activity, onComplete }: TimerProps) {
+  // Initialize all state at the top
+  const [isLoading, setIsLoading] = useState(true);
+  const [isInitialized, setIsInitialized] = useState(false);
   const [selectedDuration, setSelectedDuration] = useState(settings.focusDuration);
   const [durationInput, setDurationInput] = useState(settings.focusDuration.toString());
   const [timeLeft, setTimeLeft] = useState(selectedDuration * 60);
   const [isRunning, setIsRunning] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+
+  // Initialize all refs
   const startTimeRef = useRef<number | null>(null);
   const pausedTimeRef = useRef<number | null>(null);
   const totalPausedTimeRef = useRef<number>(0);
   const targetTimeRef = useRef<number>(selectedDuration * 60 * 1000);
+  const lastSaveRef = useRef<number>(0);
 
-  // Calculate progress percentage
-  const progress = ((selectedDuration * 60 - timeLeft) / (selectedDuration * 60)) * 100;
-  const circumference = 2 * Math.PI * 90; // radius = 90
-  const strokeDashoffset = circumference - (progress / 100) * circumference;
+  // Group all useEffects together
+  useEffect(() => {
+    const loadTimerState = async () => {
+      try {
+        setIsLoading(true);
+        const savedState = await getTimerState();
+        
+        if (savedState && savedState.activityId === activity.id) {
+          if (savedState.isRunning || savedState.isPaused) {
+            setSelectedDuration(savedState.selectedDuration);
+            setDurationInput(savedState.selectedDuration.toString());
+            setTimeLeft(savedState.timeLeft);
+            setIsRunning(savedState.isRunning);
+            setIsPaused(savedState.isPaused);
+            startTimeRef.current = savedState.startTime;
+            pausedTimeRef.current = savedState.pausedTime;
+            totalPausedTimeRef.current = savedState.totalPausedTime;
+            targetTimeRef.current = savedState.selectedDuration * 60 * 1000;
+          } else {
+            await saveTimerState({
+              activityId: null,
+              startTime: null,
+              pausedTime: null,
+              totalPausedTime: 0,
+              selectedDuration: settings.focusDuration,
+              timeLeft: settings.focusDuration * 60,
+              isRunning: false,
+              isPaused: false
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error loading timer state:', error);
+      } finally {
+        setIsLoading(false);
+        setIsInitialized(true);
+      }
+    };
+    loadTimerState();
+  }, [activity.id, settings.focusDuration]);
+
+  useEffect(() => {
+    const saveState = async () => {
+      try {
+        if (isRunning || isPaused) {
+          const now = Date.now();
+          if (now - lastSaveRef.current >= 1000) {
+            const state: TimerState = {
+              activityId: activity.id,
+              startTime: startTimeRef.current,
+              pausedTime: pausedTimeRef.current,
+              totalPausedTime: totalPausedTimeRef.current,
+              selectedDuration,
+              timeLeft,
+              isRunning,
+              isPaused
+            };
+            await saveTimerState(state);
+            lastSaveRef.current = now;
+          }
+        }
+      } catch (error) {
+        console.error('Error saving timer state:', error);
+      }
+    };
+    saveState();
+  }, [activity.id, selectedDuration, timeLeft, isRunning, isPaused]);
 
   useEffect(() => {
     setTimeLeft(selectedDuration * 60);
@@ -66,12 +135,60 @@ export default function Timer({ settings, activity, onComplete }: TimerProps) {
         cancelAnimationFrame(animationFrameId);
       }
     };
-  }, [isRunning]);
+  }, [isRunning, selectedDuration]);
+
+  useEffect(() => {
+    return () => {
+      if (isRunning || isPaused) {
+        saveTimerState({
+          activityId: activity.id,
+          startTime: startTimeRef.current,
+          pausedTime: pausedTimeRef.current,
+          totalPausedTime: totalPausedTimeRef.current,
+          selectedDuration,
+          timeLeft,
+          isRunning,
+          isPaused
+        });
+      }
+    };
+  }, [activity.id, selectedDuration, timeLeft, isRunning, isPaused]);
+
+  // Don't render anything until initial state is loaded
+  if (!isInitialized) {
+    return (
+      <div className="flex flex-col items-center space-y-8 py-4">
+        <Skeleton variant="rectangular" height={80} width="100%" className="max-w-xs" />
+        <Skeleton variant="circular" height={192} width={192} />
+        <div className="flex gap-4">
+          <Skeleton variant="rectangular" height={42} width={100} />
+          <Skeleton variant="rectangular" height={42} width={100} />
+        </div>
+      </div>
+    );
+  }
+
+  // Calculate values needed for rendering
+  const progress = ((selectedDuration * 60 - timeLeft) / (selectedDuration * 60)) * 100;
+  const circumference = 2 * Math.PI * 90; // radius = 90
+  const strokeDashoffset = circumference - (progress / 100) * circumference;
 
   const handleComplete = async (actualDuration: number) => {
     try {
       setIsLoading(true);
       onComplete(actualDuration);
+      // Clear timer state after completion
+      const state: TimerState = {
+        activityId: null,
+        startTime: null,
+        pausedTime: null,
+        totalPausedTime: 0,
+        selectedDuration: settings.focusDuration,
+        timeLeft: settings.focusDuration * 60,
+        isRunning: false,
+        isPaused: false
+      };
+      await saveTimerState(state);
     } catch (error) {
       console.error('Error completing timer:', error);
     } finally {
@@ -121,7 +238,7 @@ export default function Timer({ settings, activity, onComplete }: TimerProps) {
     }
   };
 
-  const handleReset = () => {
+  const handleReset = async () => {
     setTimeLeft(selectedDuration * 60);
     setIsRunning(false);
     setIsPaused(false);
@@ -130,6 +247,19 @@ export default function Timer({ settings, activity, onComplete }: TimerProps) {
     pausedTimeRef.current = null;
     totalPausedTimeRef.current = 0;
     targetTimeRef.current = selectedDuration * 60 * 1000;
+
+    // Reset timer state
+    const state: TimerState = {
+      activityId: activity.id,
+      startTime: null,
+      pausedTime: null,
+      totalPausedTime: 0,
+      selectedDuration,
+      timeLeft: selectedDuration * 60,
+      isRunning: false,
+      isPaused: false
+    };
+    await saveTimerState(state);
   };
 
   const handleDurationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -163,19 +293,6 @@ export default function Timer({ settings, activity, onComplete }: TimerProps) {
       }
     }
   };
-
-  if (isLoading) {
-    return (
-      <div className="flex flex-col items-center space-y-8 py-4">
-        <Skeleton variant="rectangular" height={80} width="100%" className="max-w-xs" />
-        <Skeleton variant="circular" height={192} width={192} />
-        <div className="flex gap-4">
-          <Skeleton variant="rectangular" height={42} width={100} />
-          <Skeleton variant="rectangular" height={42} width={100} />
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="flex flex-col items-center space-y-8 py-4">

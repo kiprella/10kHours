@@ -1,96 +1,125 @@
-import { Activity, TimeLog } from '@/types';
+import { Activity, TimeLog, Goal, TimerState } from '@/types';
+import * as clientStorage from './clientStorage';
 
-export const getActivities = async (): Promise<Activity[]> => {
+// Activities
+export async function getActivities(): Promise<Activity[]> {
   try {
-    const response = await fetch('/api/storage?type=activities');
-    if (!response.ok) throw new Error('Failed to fetch activities');
-    return await response.json();
+    return await clientStorage.getActivities();
   } catch (error) {
-    console.error('Error fetching activities:', error);
+    console.error('Error getting activities:', error);
     return [];
   }
-};
+}
 
-export const saveActivity = async (activity: Activity): Promise<void> => {
+export async function saveActivity(activity: Activity): Promise<void> {
   try {
-    const response = await fetch('/api/storage?type=activities', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(activity),
-    });
-    if (!response.ok) throw new Error('Failed to save activity');
+    await clientStorage.saveActivity(activity);
   } catch (error) {
     console.error('Error saving activity:', error);
+    throw error;
   }
-};
+}
 
-export const getTimeLogs = async (): Promise<TimeLog[]> => {
+// Time Logs
+export async function getTimeLogs(): Promise<TimeLog[]> {
   try {
-    const response = await fetch('/api/storage?type=timeLogs');
-    if (!response.ok) throw new Error('Failed to fetch time logs');
-    const logs = await response.json();
-    console.log('Loaded time logs:', logs);
-    return logs;
+    return await clientStorage.getTimeLogs();
   } catch (error) {
-    console.error('Error fetching time logs:', error);
+    console.error('Error getting time logs:', error);
     return [];
   }
-};
+}
 
-export const saveTimeLog = async (log: TimeLog): Promise<void> => {
+export async function saveTimeLog(log: TimeLog): Promise<void> {
   try {
-    const response = await fetch('/api/storage?type=timeLogs', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(log),
-    });
-    if (!response.ok) throw new Error('Failed to save time log');
-    console.log('Saved time log:', log);
+    await clientStorage.saveTimeLog(log);
   } catch (error) {
     console.error('Error saving time log:', error);
+    throw error;
   }
-};
+}
 
-export const updateActivityTotalTime = async (activityId: string, duration: number): Promise<void> => {
+export async function updateActivityTotalTime(activityId: string, duration: number): Promise<void> {
   try {
-    const activities = await getActivities();
-    const activity = activities.find(a => a.id === activityId);
-    
-    if (activity) {
-      activity.totalTime += duration;
-      await saveActivity(activity);
-    }
+    await clientStorage.updateActivityTotalTime(activityId, duration);
   } catch (error) {
     console.error('Error updating activity total time:', error);
+    throw error;
   }
-};
+}
 
-export const updateActivity = async (activity: Activity): Promise<void> => {
+export async function updateActivity(activity: Activity): Promise<void> {
   try {
-    const response = await fetch(`/api/storage?type=activities&id=${activity.id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(activity),
-    });
-    if (!response.ok) throw new Error('Failed to update activity');
+    await clientStorage.saveActivity(activity);
   } catch (error) {
     console.error('Error updating activity:', error);
+    throw error;
   }
-};
+}
 
-export const deleteActivity = async (activityId: string): Promise<void> => {
+export async function deleteActivity(activityId: string): Promise<void> {
   try {
-    const response = await fetch(`/api/storage?type=activities&id=${activityId}`, {
-      method: 'DELETE',
-    });
-    if (!response.ok) throw new Error('Failed to delete activity');
+    const activities = await clientStorage.getActivities();
+    const filteredActivities = activities.filter(a => a.id !== activityId);
+    await clientStorage.setStorageData(clientStorage.STORAGE_KEYS.ACTIVITIES, filteredActivities);
   } catch (error) {
     console.error('Error deleting activity:', error);
+    throw error;
   }
-}; 
+}
+
+// Timer State
+export async function getTimerState(): Promise<TimerState | null> {
+  try {
+    return await clientStorage.getTimerState();
+  } catch (error) {
+    console.error('Error getting timer state:', error);
+    return null;
+  }
+}
+
+export async function saveTimerState(state: TimerState): Promise<void> {
+  try {
+    await clientStorage.saveTimerState(state);
+  } catch (error) {
+    console.error('Error saving timer state:', error);
+    throw error;
+  }
+}
+
+// Goals
+export async function getGoals(): Promise<Goal[]> {
+  try {
+    return await clientStorage.getGoals();
+  } catch (error) {
+    console.error('Error getting goals:', error);
+    return [];
+  }
+}
+
+export async function saveGoal(goal: Goal): Promise<void> {
+  try {
+    await clientStorage.saveGoal(goal);
+  } catch (error) {
+    console.error('Error saving goal:', error);
+    throw error;
+  }
+}
+
+export async function updateGoal(goal: Goal): Promise<void> {
+  try {
+    await clientStorage.updateGoal(goal);
+  } catch (error) {
+    console.error('Error updating goal:', error);
+    throw error;
+  }
+}
+
+export async function deleteGoal(goalId: string): Promise<void> {
+  try {
+    await clientStorage.deleteGoal(goalId);
+  } catch (error) {
+    console.error('Error deleting goal:', error);
+    throw error;
+  }
+} 
