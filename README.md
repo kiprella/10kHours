@@ -13,8 +13,7 @@
 - ⏱️ 45-minute focused work sessions
 - 📊 Beautiful visualizations of your progress
 - 📈 Monthly progress tracking
-- 🥧 Activity distribution analysis
-- 💾 Persistent data storage
+- 💾 Local data storage
 
 ## Getting Started
 
@@ -43,19 +42,6 @@ npm run dev:4000
 
 
 
-## Built With
-
-- [Next.js](https://nextjs.org/) - React framework
-- [TypeScript](https://www.typescriptlang.org/) - Type safety
-- [Tailwind CSS](https://tailwindcss.com/) - Styling
-- [Chart.js](https://www.chartjs.org/) - Data visualization
-- [Google Fonts](https://fonts.google.com/) - Kreon typography
-
-## Data Storage
-
-The application uses JSON file-based storage in the `src/data` directory:
-- `activities.json` - Stores activity definitions
-- `timeLogs.json` - Stores completed time sessions
 
 
 ## License
