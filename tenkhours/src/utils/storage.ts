@@ -59,9 +59,7 @@ export async function updateActivity(activity: Activity): Promise<void> {
 
 export async function deleteActivity(activityId: string): Promise<void> {
   try {
-    const activities = await clientStorage.getActivities();
-    const filteredActivities = activities.filter(a => a.id !== activityId);
-    await clientStorage.setStorageData(clientStorage.STORAGE_KEYS.ACTIVITIES, filteredActivities);
+    await clientStorage.deleteActivity(activityId);
   } catch (error) {
     console.error('Error deleting activity:', error);
     throw error;

@@ -90,6 +90,18 @@ export async function saveActivity(activity: Activity): Promise<void> {
   }
 }
 
+export async function deleteActivity(activityId: string): Promise<void> {
+  try {
+    const response = await fetch(`/api/storage?type=${STORAGE_KEYS.ACTIVITIES}&id=${activityId}`, {
+      method: 'DELETE'
+    });
+    if (!response.ok) throw new Error('Failed to delete activity');
+  } catch (error) {
+    console.error('Error deleting activity:', error);
+    throw error;
+  }
+}
+
 // Time Logs
 export async function getTimeLogs(): Promise<TimeLog[]> {
   return getStorageData<TimeLog>(STORAGE_KEYS.TIME_LOGS);
