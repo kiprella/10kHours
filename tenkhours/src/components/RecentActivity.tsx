@@ -24,11 +24,11 @@ export default function RecentActivity() {
       
       console.log('Original logs:', logs);
       
-      // Create a map to store unique logs based on timestamp and activityId
+      // Create a map to store unique logs based on timestamp and activityId (ignore duration)
       const uniqueLogsMap = new Map();
       logs.forEach(log => {
         const key = `${log.activityId}-${log.timestamp}`;
-        if (!uniqueLogsMap.has(key) || log.timestamp > uniqueLogsMap.get(key).timestamp) {
+        if (!uniqueLogsMap.has(key)) {
           uniqueLogsMap.set(key, log);
         }
       });
