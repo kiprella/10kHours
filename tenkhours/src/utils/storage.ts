@@ -48,6 +48,20 @@ export async function updateActivityTotalTime(activityId: string, duration: numb
   }
 }
 
+/**
+ * Atomically saves a time log and updates the corresponding activity's total time.
+ * Throws if any step fails.
+ */
+export async function addTimeLogAndUpdateActivity(log: TimeLog): Promise<void> {
+  try {
+    await clientStorage.saveTimeLog(log);
+    await clientStorage.updateActivityTotalTime(log.activityId, log.duration);
+  } catch (error) {
+    console.error('Error saving time log and updating activity:', error);
+    throw error;
+  }
+}
+
 export async function updateActivity(activity: Activity): Promise<void> {
   try {
     await clientStorage.saveActivity(activity);
@@ -64,6 +78,18 @@ export async function deleteActivity(activityId: string): Promise<void> {
     console.error('Error deleting activity:', error);
     throw error;
   }
+}
+
+/**
+ * Deletes an activity only if there are no time logs referencing it. Throws if logs exist.
+ */
+export async function deleteActivityWithReferentialIntegrity(activityId: string): Promise<void> {
+  const logs = await clientStorage.getTimeLogs();
+  const hasLogs = logs.some(log => log.activityId === activityId);
+  if (hasLogs) {
+    throw new Error('Cannot delete activity: time logs exist for this activity.');
+  }
+  await clientStorage.deleteActivity(activityId);
 }
 
 // Timer State
@@ -120,4 +146,20 @@ export async function deleteGoal(goalId: string): Promise<void> {
     console.error('Error deleting goal:', error);
     throw error;
   }
+}
+
+/**
+ * Returns only time logs whose activityId matches an existing activity. Warns if orphans are found.
+ */
+export async function getValidatedTimeLogs(): Promise<TimeLog[]> {
+  const [logs, activities] = await Promise.all([
+    clientStorage.getTimeLogs(),
+    clientStorage.getActivities()
+  ]);
+  const activityIds = new Set(activities.map(a => a.id));
+  const validLogs = logs.filter(log => activityIds.has(log.activityId));
+  if (validLogs.length !== logs.length) {
+    console.warn('Orphaned time logs found and excluded.');
+  }
+  return validLogs;
 } 

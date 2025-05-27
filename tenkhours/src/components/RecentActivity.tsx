@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { TimeLog, Activity } from '@/types';
-import { getTimeLogs, getActivities } from '@/utils/storage';
+import { getValidatedTimeLogs, getActivities } from '@/utils/storage';
 import Skeleton from './Skeleton';
 
 export default function RecentActivity() {
@@ -18,7 +18,7 @@ export default function RecentActivity() {
       setIsLoading(true);
       setError(null);
       const [logs, activitiesData] = await Promise.all([
-        getTimeLogs(),
+        getValidatedTimeLogs(),
         getActivities()
       ]);
       
@@ -88,7 +88,7 @@ export default function RecentActivity() {
           {error}
         </div>
       )}
-      <div className="space-y-2">
+      <div className="space-y-2 max-h-80 overflow-y-auto">
         {isLoading ? (
           <LoadingSkeleton />
         ) : (

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Activity } from '@/types';
-import { getActivities, saveActivity, updateActivity, deleteActivity } from '@/utils/storage';
+import { getActivities, saveActivity, updateActivity, deleteActivityWithReferentialIntegrity } from '@/utils/storage';
 
 interface ActivityTagProps {
   onSelectActivity: (activity: Activity) => void;
@@ -37,10 +37,9 @@ export default function ActivityTag({ onSelectActivity }: ActivityTagProps) {
           id: Date.now().toString(),
           name: newActivity.trim(),
           totalTime: 0,
-          color: '#4F46E5'
+          color: '#4F46E5',
         };
         await saveActivity(activity);
-        // Update state immediately instead of reloading
         setActivities(prevActivities => [...prevActivities, activity]);
         setNewActivity('');
       } catch (error) {
@@ -65,7 +64,6 @@ export default function ActivityTag({ onSelectActivity }: ActivityTagProps) {
           name: editText.trim(),
         };
         await updateActivity(updatedActivity);
-        // Update state immediately instead of reloading
         setActivities(prevActivities => 
           prevActivities.map(activity => 
             activity.id === updatedActivity.id ? updatedActivity : activity
@@ -85,13 +83,12 @@ export default function ActivityTag({ onSelectActivity }: ActivityTagProps) {
     if (window.confirm('Are you sure you want to delete this activity?')) {
       try {
         setIsLoading(true);
-        await deleteActivity(activityId);
-        // Update state immediately instead of reloading
+        await deleteActivityWithReferentialIntegrity(activityId);
         setActivities(prevActivities => 
           prevActivities.filter(activity => activity.id !== activityId)
         );
       } catch (error) {
-        console.error('Error deleting activity:', error);
+        alert('Failed to delete activity: ' + (error instanceof Error ? error.message : error));
       } finally {
         setIsLoading(false);
       }

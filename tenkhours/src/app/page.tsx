@@ -6,7 +6,7 @@ import ActivityTag from '@/components/ActivityTag';
 import RecentActivity from '@/components/RecentActivity';
 import Summary from '@/components/Summary';
 import { Activity, TimerSettings, TimeLog as TimeLogType } from '@/types';
-import { saveTimeLog, updateActivityTotalTime } from '@/utils/storage';
+import { addTimeLogAndUpdateActivity } from '@/utils/storage';
 
 const DEFAULT_SETTINGS: TimerSettings = {
   focusDuration: 45,
@@ -15,7 +15,7 @@ const DEFAULT_SETTINGS: TimerSettings = {
 export default function Home() {
   const [selectedActivity, setSelectedActivity] = useState<Activity | undefined>();
 
-  const handleTimerComplete = (duration: number) => {
+  const handleTimerComplete = async (duration: number) => {
     if (!selectedActivity) return;
 
     const log: TimeLogType = {
@@ -25,8 +25,11 @@ export default function Home() {
       timestamp: Date.now(),
     };
 
-    saveTimeLog(log);
-    updateActivityTotalTime(selectedActivity.id, duration);
+    try {
+      await addTimeLogAndUpdateActivity(log);
+    } catch (error) {
+      alert('Failed to save time log: ' + (error instanceof Error ? error.message : error));
+    }
   };
 
   return (

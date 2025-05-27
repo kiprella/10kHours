@@ -10,9 +10,10 @@ import {
   Title,
   Tooltip,
   Legend,
+  TooltipItem
 } from 'chart.js';
 import { getTimeLogSummary } from '@/utils/timeLogUtils';
-import { getActivities, getTimeLogs } from '@/utils/storage';
+import { getActivities, getValidatedTimeLogs } from '@/utils/storage';
 import { Activity, TimeLog } from '@/types';
 
 ChartJS.register(
@@ -34,32 +35,15 @@ const months = [
 
 export default function Summary() {
   const [activities, setActivities] = useState<Activity[]>([]);
-  const [monthlyHours, setMonthlyHours] = useState<{ month: string; monthKey: string; hours: number }[]>([]);
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
   const [availableYears, setAvailableYears] = useState<number[]>([]);
   const [monthlyBreakdown, setMonthlyBreakdown] = useState<{ [key: string]: { [activityId: string]: number } }>({});
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [totalMinutes, setTotalMinutes] = useState(0);
   const [timeLogs, setTimeLogs] = useState<TimeLog[]>([]);
   const [pieView, setPieView] = useState<'year' | 'month'>('year');
   const [selectedMonthIdx, setSelectedMonthIdx] = useState<number>(new Date().getMonth());
-
-  const activityMinutesForYear = useMemo(() => {
-    const result: { [activityId: string]: number } = {};
-    activities.forEach(activity => {
-      result[activity.id] = 0;
-    });
-    timeLogs.forEach(log => {
-      const date = new Date(log.timestamp);
-      if (date.getFullYear() === selectedYear) {
-        if (result[log.activityId] !== undefined) {
-          result[log.activityId] += log.duration;
-        }
-      }
-    });
-    return result;
-  }, [activities, timeLogs, selectedYear]);
+  const [selectedTag, setSelectedTag] = useState<string>('');
 
   useEffect(() => {
     const loadData = async () => {
@@ -71,7 +55,7 @@ export default function Summary() {
         setActivities(activitiesData);
 
         const summary = await getTimeLogSummary();
-        const logs = await getTimeLogs();
+        const logs = await getValidatedTimeLogs();
         setTimeLogs(logs);
 
         // Extract unique years from the data
@@ -85,17 +69,6 @@ export default function Summary() {
           years.add(selectedYear);
         }
         setAvailableYears(Array.from(years).sort((a, b) => b - a));
-
-        // Initialize all months with 0 hours
-        const monthlyData = months.map((month, idx) => {
-          const monthKey = `${selectedYear}-${String(idx + 1).padStart(2, '0')}`;
-          const found = summary.monthlyData.find(m => m.month === monthKey);
-          return {
-            month,
-            monthKey,
-            hours: found ? found.minutes / 60 : 0
-          };
-        });
 
         // Per-month, per-activity breakdown
         const breakdown: { [key: string]: { [activityId: string]: number } } = {};
@@ -117,9 +90,7 @@ export default function Summary() {
           });
         }
 
-        setMonthlyHours(monthlyData);
         setMonthlyBreakdown(breakdown);
-        setTotalMinutes(summary.totalMinutes);
       } catch (error) {
         console.error('Error loading summary data:', error);
         setError('Failed to load summary data');
@@ -130,12 +101,57 @@ export default function Summary() {
     loadData();
   }, [selectedYear]);
 
+  // Get all unique activity names for filtering
+  const allActivityNames = useMemo(() => {
+    return activities.map(a => a.name);
+  }, [activities]);
+
+  // Filter activities by selected name
+  const filteredActivities = useMemo(() => {
+    if (!selectedTag) return activities;
+    return activities.filter(a => a.name === selectedTag);
+  }, [activities, selectedTag]);
+
+  // Filter logs for charts by selected activity name
+  const filteredTimeLogs = useMemo(() => {
+    if (!selectedTag) return timeLogs;
+    const filteredIds = new Set(filteredActivities.map(a => a.id));
+    return timeLogs.filter(log => filteredIds.has(log.activityId));
+  }, [timeLogs, filteredActivities, selectedTag]);
+
+  // --- Monthly Hours (Line Chart) Calculation ---
+  const filteredMonthlyHours = useMemo(() => {
+    // For each month, sum hours for filtered logs
+    return months.map((month, idx) => {
+      const monthKey = `${selectedYear}-${String(idx + 1).padStart(2, '0')}`;
+      // Filter logs for this month
+      const logsForMonth = filteredTimeLogs.filter(log => {
+        const date = new Date(log.timestamp);
+        return date.getFullYear() === selectedYear && date.getMonth() === idx;
+      });
+      // Only count logs for filtered activities
+      const filteredIds = new Set(filteredActivities.map(a => a.id));
+      const minutes = logsForMonth.filter(log => filteredIds.has(log.activityId)).reduce((sum, log) => sum + log.duration, 0);
+      return {
+        month,
+        monthKey,
+        hours: minutes / 60,
+      };
+    });
+  }, [filteredTimeLogs, filteredActivities, selectedYear]);
+
+  // --- Total Focus Time Calculation ---
+  const filteredTotalMinutes = useMemo(() => {
+    return filteredTimeLogs.reduce((sum, log) => sum + log.duration, 0);
+  }, [filteredTimeLogs]);
+
+  // --- Line Chart Data ---
   const lineChartData = {
-    labels: monthlyHours.map(d => d.month),
+    labels: filteredMonthlyHours.map(d => d.month),
     datasets: [
       {
         label: 'Hours',
-        data: monthlyHours.map(d => d.hours),
+        data: filteredMonthlyHours.map(d => d.hours),
         borderColor: '#4F46E5',
         backgroundColor: '#4F46E5',
         tension: 0.4,
@@ -154,9 +170,9 @@ export default function Summary() {
       },
       tooltip: {
         callbacks: {
-          label: (context: any) => {
+          label: (context: TooltipItem<'line'>) => {
             const idx = context.dataIndex;
-            const monthKey = monthlyHours[idx]?.monthKey;
+            const monthKey = filteredMonthlyHours[idx]?.monthKey;
             const breakdown = monthlyBreakdown[monthKey];
             if (!breakdown) {
               return `Total: ${Number(context.raw).toFixed(2)}H`;
@@ -238,21 +254,21 @@ export default function Summary() {
   // Get filtered logs for pie chart
   const pieLogs = useMemo(() => {
     if (pieView === 'year') {
-      return timeLogs.filter(log => {
+      return filteredTimeLogs.filter(log => {
         const date = new Date(log.timestamp);
         return date.getFullYear() === selectedYear;
       });
     } else {
-      return timeLogs.filter(log => {
+      return filteredTimeLogs.filter(log => {
         const date = new Date(log.timestamp);
         return date.getFullYear() === selectedYear && date.getMonth() === selectedMonthIdx;
       });
     }
-  }, [pieView, selectedYear, selectedMonthIdx, timeLogs]);
+  }, [pieView, selectedYear, selectedMonthIdx, filteredTimeLogs]);
 
   const pieActivityMinutes = useMemo(() => {
     const result: { [activityId: string]: number } = {};
-    activities.forEach(activity => {
+    filteredActivities.forEach(activity => {
       result[activity.id] = 0;
     });
     pieLogs.forEach(log => {
@@ -261,13 +277,13 @@ export default function Summary() {
       }
     });
     return result;
-  }, [activities, pieLogs]);
+  }, [filteredActivities, pieLogs]);
 
   const pieChartData = {
-    labels: activities.map(a => `${a.name} (${formatTime(pieActivityMinutes[a.id] || 0)})`),
+    labels: filteredActivities.map(a => `${a.name} (${formatTime(pieActivityMinutes[a.id] || 0)})`),
     datasets: [
       {
-        data: activities.map(a => pieActivityMinutes[a.id] || 0),
+        data: filteredActivities.map(a => pieActivityMinutes[a.id] || 0),
         backgroundColor: pieColors,
         borderWidth: 0,
       },
@@ -292,8 +308,8 @@ export default function Summary() {
       },
       tooltip: {
         callbacks: {
-          label: (context: any) => {
-            const value = context.raw;
+          label: (context: TooltipItem<'pie'>) => {
+            const value = context.raw as number;
             const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
             const percentage = ((value / total) * 100).toFixed(0);
             const label = context.label || '';
@@ -322,17 +338,31 @@ export default function Summary() {
 
   return (
     <div className="space-y-8">
+      {/* Tag Filter */}
+      <div className="flex justify-end">
+        <select
+          className="px-3 py-1 rounded-lg border border-slate-300 bg-white text-slate-700"
+          value={selectedTag}
+          onChange={e => setSelectedTag(e.target.value)}
+        >
+          <option value="">All Activities</option>
+          {allActivityNames.map(name => (
+            <option key={name} value={name}>{name}</option>
+          ))}
+        </select>
+      </div>
+
       {/* Total Focus Time */}
       <div className="bg-white p-6 rounded-lg shadow border border-slate-200">
         <h3 className="text-lg font-semibold text-slate-800 mb-4">Total Focus Time</h3>
         <div className="flex items-center justify-center">
           <div className="text-center">
             <div className="text-4xl font-bold text-indigo-600">
-              {Math.floor(totalMinutes / 60)}
+              {Math.floor(filteredTotalMinutes / 60)}
               <span className="text-2xl ml-1">Hours</span>
             </div>
             <div className="text-slate-600 mt-1">
-              {totalMinutes % 60}
+              {filteredTotalMinutes % 60}
               <span className="ml-1">Minutes</span>
             </div>
           </div>

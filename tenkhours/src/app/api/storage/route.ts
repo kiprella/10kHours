@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Activity, TimeLog, Goal, TimerState } from '@/types';
+// import { Activity, TimeLog, Goal, TimerState } from '@/types';
 import fs from 'fs';
 import path from 'path';
 
@@ -152,8 +152,8 @@ export async function PUT(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   const type = request.nextUrl.searchParams.get('type');
   const id = request.nextUrl.searchParams.get('id');
-  if (!type || !id) {
-    return NextResponse.json({ error: 'Type and ID parameters are required' }, { status: 400 });
+  if (!type || (type !== 'timerState' && !id)) {
+    return NextResponse.json({ error: 'Type parameter is required, and ID is required for non-timerState types' }, { status: 400 });
   }
 
   try {
