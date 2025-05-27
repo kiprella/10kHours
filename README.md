@@ -4,15 +4,16 @@
 
 
 ![image](https://github.com/user-attachments/assets/4a79c758-f9a9-416f-9916-b64cf414690f)
+![image](https://github.com/user-attachments/assets/2e62de67-c09d-44b6-838f-86c19fddd7c0)
 
 
 
 ## Features
 
-- 🎯 Track multiple activities/skills
-- ⏱️ 45-minute focused work sessions
-- 📊 Beautiful visualizations of your progress
-- 📈 Monthly progress tracking
+- 🎯 Unlimited activities
+- ⏱️ Custom focused work sessions
+- 📊 Line, pie charts
+- 📈 Yearly/Monthly progress tracking
 - 💾 Local data storage
 
 ## Getting Started
@@ -35,7 +36,7 @@ npm install
 
 3. Start the development server:
 ```
-npm run dev:4000
+npm run dev
 ```
 
 4. Open [http://localhost:3000](http://localhost:3000) in your browser to see the application.
