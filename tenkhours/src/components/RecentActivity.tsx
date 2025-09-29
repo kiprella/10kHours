@@ -251,7 +251,10 @@ export default function RecentActivity() {
                   className="flex justify-between items-center p-3 bg-slate-50 rounded-lg border border-slate-200 group hover:bg-slate-100"
                 >
                   <div className="flex flex-col">
-                    <span className="font-medium text-slate-800">
+                    <span 
+                      className="font-medium"
+                      style={{ color: activity?.color || '#64748B' }}
+                    >
                       {activity?.name || 'Unknown Activity'}
                     </span>
                     <span className="text-sm text-slate-500">

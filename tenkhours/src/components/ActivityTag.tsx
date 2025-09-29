@@ -119,7 +119,12 @@ export default function ActivityTag({ onSelectActivity }: ActivityTagProps) {
         {activities.map((activity) => (
           <div
             key={activity.id}
-            className="flex items-center gap-2 px-3 py-1 bg-slate-50 rounded-lg border border-slate-200"
+            className="flex items-center gap-2 px-3 py-1 rounded-lg border"
+            style={{
+              backgroundColor: `${activity.color}15`,
+              borderColor: `${activity.color}40`,
+              color: activity.color
+            }}
           >
             {editingActivity?.id === activity.id ? (
               <>

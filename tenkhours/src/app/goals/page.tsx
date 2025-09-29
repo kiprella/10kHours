@@ -259,8 +259,8 @@ export default function GoalsPage() {
                 </button>
               </div>
               <div className={compactView ? 'mb-2' : 'mb-4'}>
-                <div className="text-xs text-slate-500 mb-1">
-                  Activity: {activity?.name || 'Unknown'}
+                <div className="text-xs mb-1">
+                  Activity: <span style={{ color: activity?.color || '#64748B' }}>{activity?.name || 'Unknown'}</span>
                 </div>
                 {!compactView && goal.description && (
                   <p className="text-sm text-slate-600">{goal.description}</p>
@@ -275,8 +275,11 @@ export default function GoalsPage() {
                 </div>
                 <div className="relative h-2 bg-slate-100 rounded-full overflow-hidden">
                   <div
-                    className="absolute top-0 left-0 h-full bg-indigo-600 rounded-full transition-all duration-300"
-                    style={{ width: `${Math.min(progress, 100)}%` }}
+                    className="absolute top-0 left-0 h-full rounded-full transition-all duration-300"
+                    style={{ 
+                      width: `${Math.min(progress, 100)}%`,
+                      backgroundColor: activity?.color || '#4F46E5'
+                    }}
                   />
                 </div>
                 <div className="text-right text-xs text-slate-500">

@@ -366,7 +366,7 @@ export default function Timer({ settings, activity, onComplete }: TimerProps) {
             cy="96"
             r="90"
             fill="none"
-            stroke={isRunning ? '#4F46E5' : '#10B981'}
+            stroke={isRunning ? activity.color : '#10B981'}
             strokeWidth="8"
             strokeLinecap="round"
             strokeDasharray={circumference}
@@ -377,7 +377,7 @@ export default function Timer({ settings, activity, onComplete }: TimerProps) {
         
         {/* Timer display */}
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center">
-          <div className="text-5xl font-bold text-indigo-600">{formatTime(timeLeft)}</div>
+          <div className="text-5xl font-bold" style={{ color: activity.color }}>{formatTime(timeLeft)}</div>
           <div className="text-lg text-slate-600 mt-2">{activity.name}</div>
         </div>
       </div>

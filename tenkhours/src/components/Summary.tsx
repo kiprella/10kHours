@@ -164,11 +164,11 @@ export default function Summary() {
       {
         label: 'Hours',
         data: filteredMonthlyHours.map(d => d.hours),
-        borderColor: '#4F46E5',
-        backgroundColor: '#4F46E5',
+        borderColor: selectedTag && filteredActivities.length > 0 ? filteredActivities[0].color : '#4F46E5',
+        backgroundColor: selectedTag && filteredActivities.length > 0 ? filteredActivities[0].color : '#4F46E5',
         tension: 0.4,
         pointRadius: 6,
-        pointBackgroundColor: '#4F46E5',
+        pointBackgroundColor: selectedTag && filteredActivities.length > 0 ? filteredActivities[0].color : '#4F46E5',
       },
     ],
   };
@@ -230,37 +230,8 @@ export default function Summary() {
     return `${hours}h ${mins}m`;
   };
 
-  // Generate a color palette for as many activities as needed
-  function generateColorPalette(n: number) {
-    const baseColors = [
-      '#4F46E5', // Indigo
-      '#10B981', // Emerald
-      '#64748B', // Slate
-      '#8B5CF6', // Violet
-      '#F59E42', // Orange
-      '#F43F5E', // Rose
-      '#FBBF24', // Amber
-      '#22D3EE', // Cyan
-      '#A3E635', // Lime
-      '#E879F9', // Pink
-      '#F472B6', // Fuchsia
-      '#60A5FA', // Blue
-      '#34D399', // Green
-      '#F87171', // Red
-      '#FCD34D', // Yellow
-      '#C084FC', // Purple
-    ];
-    if (n <= baseColors.length) return baseColors.slice(0, n);
-    // Generate more colors if needed
-    const colors = [...baseColors];
-    for (let i = baseColors.length; i < n; i++) {
-      // Generate HSL colors spaced around the color wheel
-      const hue = Math.round((i * 360) / n);
-      colors.push(`hsl(${hue}, 70%, 60%)`);
-    }
-    return colors;
-  }
-  const pieColors = generateColorPalette(activities.length);
+  // Use activity colors for pie chart
+  const pieColors = filteredActivities.map(activity => activity.color);
 
   // --- PIE CHART DATA FILTERING ---
   // Get filtered logs for pie chart
