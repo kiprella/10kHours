@@ -1,25 +1,15 @@
-import { TimeLog } from '@/types';
+import { TimeLog, TimeLogSummary } from '@/types';
 import { getTimeLogs } from './storage';
 
-export type TimeLogSummary = {
-  totalSessions: number;
-  totalMinutes: number;
-  dailyLogs: Array<{
-    date: string;
-    logs: TimeLog[];
-  }>;
-  weeklyData: Array<{
-    week: string;
-    minutes: number;
-  }>;
-  monthlyData: Array<{
-    month: string;
-    minutes: number;
-  }>;
-  yearlyData: Array<{
-    year: string;
-    minutes: number;
-  }>;
+// Helper function to get ISO week number
+const getISOWeek = (date: Date): { year: number; week: number } => {
+  const utcDate = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const day = utcDate.getUTCDay() || 7; // Sunday should be treated as 7
+  utcDate.setUTCDate(utcDate.getUTCDate() + 4 - day); // Move to nearest Thursday
+  const yearStart = new Date(Date.UTC(utcDate.getUTCFullYear(), 0, 1));
+  const week = Math.ceil(((utcDate.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+  const year = utcDate.getUTCFullYear();
+  return { year, week };
 };
 
 export const getTimeLogSummary = async (): Promise<TimeLogSummary> => {
@@ -32,7 +22,8 @@ export const getTimeLogSummary = async (): Promise<TimeLogSummary> => {
   logs.forEach(log => {
     const date = new Date(log.timestamp);
     const dayKey = date.toISOString().split('T')[0];
-    const weekKey = `${date.getFullYear()}-W${Math.ceil((date.getDate() + date.getDay()) / 7)}`;
+    const { year, week } = getISOWeek(date);
+    const weekKey = `${year}-W${String(week).padStart(2, '0')}`;
     const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
     const yearKey = String(date.getFullYear());
 
@@ -69,3 +60,4 @@ export const getTimeLogSummary = async (): Promise<TimeLogSummary> => {
       .sort((a, b) => b.year.localeCompare(a.year)),
   };
 }; 
+

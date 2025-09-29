@@ -14,7 +14,6 @@ const DEFAULT_SETTINGS: TimerSettings = {
 
 export default function Home() {
   const [selectedActivity, setSelectedActivity] = useState<Activity | undefined>();
-
   const handleTimerComplete = async (duration: number) => {
     if (!selectedActivity) return;
 
@@ -27,6 +26,10 @@ export default function Home() {
 
     try {
       await addTimeLogAndUpdateActivity(log);
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('timeLogUpdated'));
+      }
     } catch (error) {
       alert('Failed to save time log: ' + (error instanceof Error ? error.message : error));
     }

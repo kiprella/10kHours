@@ -116,6 +116,27 @@ export async function saveTimeLog(log: TimeLog): Promise<void> {
   if (!response.ok) throw new Error('Failed to save time log');
 }
 
+export async function updateTimeLog(log: TimeLog): Promise<void> {
+  const response = await fetch(`/api/storage?type=${STORAGE_KEYS.TIME_LOGS}&id=${log.id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(log)
+  });
+  if (!response.ok) throw new Error('Failed to update time log');
+}
+
+export async function deleteTimeLog(logId: string): Promise<void> {
+  try {
+    const response = await fetch(`/api/storage?type=${STORAGE_KEYS.TIME_LOGS}&id=${logId}`, {
+      method: 'DELETE'
+    });
+    if (!response.ok) throw new Error('Failed to delete time log');
+  } catch (error) {
+    console.error('Error deleting time log:', error);
+    throw error;
+  }
+}
+
 // Update activity total time
 export async function updateActivityTotalTime(activityId: string, duration: number): Promise<void> {
   const activities = await getActivities();

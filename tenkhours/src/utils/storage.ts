@@ -39,6 +39,84 @@ export async function saveTimeLog(log: TimeLog): Promise<void> {
   }
 }
 
+export async function updateTimeLog(log: TimeLog): Promise<void> {
+  try {
+    await clientStorage.updateTimeLog(log);
+  } catch (error) {
+    console.error('Error updating time log:', error);
+    throw error;
+  }
+}
+
+/**
+ * Updates a time log and adjusts the activity's total time accordingly.
+ * This function handles the difference between old and new duration.
+ */
+export async function updateTimeLogAndAdjustActivity(
+  logId: string, 
+  updatedLog: TimeLog
+): Promise<void> {
+  try {
+    // Get the original log to calculate the difference
+    const originalLogs = await clientStorage.getTimeLogs();
+    const originalLog = originalLogs.find(l => l.id === logId);
+    
+    if (!originalLog) {
+      throw new Error('Time log not found');
+    }
+    
+    // Calculate the duration difference
+    const durationDifference = updatedLog.duration - originalLog.duration;
+    
+    // Update the time log
+    await clientStorage.updateTimeLog(updatedLog);
+    
+    // Adjust the activity's total time by the difference
+    if (durationDifference !== 0) {
+      await clientStorage.updateActivityTotalTime(updatedLog.activityId, durationDifference);
+    }
+    
+  } catch (error) {
+    console.error('Error updating time log and adjusting activity:', error);
+    throw error;
+  }
+}
+
+export async function deleteTimeLog(logId: string): Promise<void> {
+  try {
+    await clientStorage.deleteTimeLog(logId);
+  } catch (error) {
+    console.error('Error deleting time log:', error);
+    throw error;
+  }
+}
+
+/**
+ * Deletes a time log and adjusts the activity's total time accordingly.
+ * This function subtracts the deleted log's duration from the activity's total time.
+ */
+export async function deleteTimeLogAndAdjustActivity(logId: string): Promise<void> {
+  try {
+    // Get the original log to get its duration and activity
+    const originalLogs = await clientStorage.getTimeLogs();
+    const originalLog = originalLogs.find(l => l.id === logId);
+    
+    if (!originalLog) {
+      throw new Error('Time log not found');
+    }
+    
+    // Delete the time log
+    await clientStorage.deleteTimeLog(logId);
+    
+    // Subtract the duration from the activity's total time
+    await clientStorage.updateActivityTotalTime(originalLog.activityId, -originalLog.duration);
+    
+  } catch (error) {
+    console.error('Error deleting time log and adjusting activity:', error);
+    throw error;
+  }
+}
+
 export async function updateActivityTotalTime(activityId: string, duration: number): Promise<void> {
   try {
     await clientStorage.updateActivityTotalTime(activityId, duration);
@@ -50,14 +128,52 @@ export async function updateActivityTotalTime(activityId: string, duration: numb
 
 /**
  * Atomically saves a time log and updates the corresponding activity's total time.
+ * If any step fails, attempts to rollback the changes to maintain data consistency.
  * Throws if any step fails.
  */
 export async function addTimeLogAndUpdateActivity(log: TimeLog): Promise<void> {
+  let timeLogSaved = false;
+  let originalActivity: Activity | null = null;
+  
   try {
+    // Get the original activity state for potential rollback
+    const activities = await clientStorage.getActivities();
+    originalActivity = activities.find(a => a.id === log.activityId) || null;
+    
+    // Save the time log first
     await clientStorage.saveTimeLog(log);
+    timeLogSaved = true;
+    
+    // Update the activity total time
     await clientStorage.updateActivityTotalTime(log.activityId, log.duration);
+    
   } catch (error) {
     console.error('Error saving time log and updating activity:', error);
+    
+    // Attempt rollback if time log was saved but activity update failed
+    if (timeLogSaved) {
+      try {
+        console.log('Attempting to rollback: removing saved time log and restoring original activity state');
+        
+        // Remove the saved time log
+        await clientStorage.deleteTimeLog(log.id);
+        console.log('Time log removed successfully');
+        
+        // Restore original activity state if we have it
+        if (originalActivity) {
+          await clientStorage.saveActivity(originalActivity);
+          console.log('Activity state restored successfully');
+        }
+        
+        console.log('Rollback completed successfully');
+      } catch (rollbackError) {
+        console.error('Rollback failed:', rollbackError);
+        // Log the inconsistency for manual resolution
+        console.error('DATA INCONSISTENCY: Time log may be orphaned. Manual intervention may be required.');
+        console.error('Orphaned log ID:', log.id);
+      }
+    }
+    
     throw error;
   }
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Line, Pie } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -45,61 +45,73 @@ export default function Summary() {
   const [selectedMonthIdx, setSelectedMonthIdx] = useState<number>(new Date().getMonth());
   const [selectedTag, setSelectedTag] = useState<string>('');
 
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        
-        const activitiesData = await getActivities();
-        setActivities(activitiesData);
+  const loadData = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
 
-        const summary = await getTimeLogSummary();
-        const logs = await getValidatedTimeLogs();
-        setTimeLogs(logs);
+      const activitiesData = await getActivities();
+      setActivities(activitiesData);
 
-        // Extract unique years from the data
-        const years = new Set<number>();
-        summary.monthlyData.forEach(data => {
-          const [year] = data.month.split('-');
-          years.add(parseInt(year));
-        });
-        // If no data exists for current year, add it to available years
-        if (!years.has(selectedYear)) {
-          years.add(selectedYear);
-        }
-        setAvailableYears(Array.from(years).sort((a, b) => b - a));
+      const summary = await getTimeLogSummary();
+      const logs = await getValidatedTimeLogs();
+      setTimeLogs(logs);
 
-        // Per-month, per-activity breakdown
-        const breakdown: { [key: string]: { [activityId: string]: number } } = {};
-        for (let i = 0; i < 12; i++) {
-          const monthKey = `${selectedYear}-${String(i + 1).padStart(2, '0')}`;
-          breakdown[monthKey] = {};
-          // Filter logs for this month
-          const logsForMonth = logs.filter(log => {
-            const date = new Date(log.timestamp);
-            return date.getFullYear() === selectedYear && date.getMonth() === i;
-          });
-          activitiesData.forEach(activity => {
-            const totalMinutes = logsForMonth
-              .filter(log => log.activityId === activity.id)
-              .reduce((sum, log) => sum + log.duration, 0);
-            if (totalMinutes > 0) {
-              breakdown[monthKey][activity.id] = totalMinutes;
-            }
-          });
-        }
-
-        setMonthlyBreakdown(breakdown);
-      } catch (error) {
-        console.error('Error loading summary data:', error);
-        setError('Failed to load summary data');
-      } finally {
-        setIsLoading(false);
+      const years = new Set<number>();
+      summary.monthlyData.forEach(data => {
+        const [year] = data.month.split('-');
+        years.add(parseInt(year));
+      });
+      if (!years.has(selectedYear)) {
+        years.add(selectedYear);
       }
-    };
-    loadData();
+      setAvailableYears(Array.from(years).sort((a, b) => b - a));
+
+      const breakdown: { [key: string]: { [activityId: string]: number } } = {};
+      for (let i = 0; i < 12; i++) {
+        const monthKey = `${selectedYear}-${String(i + 1).padStart(2, '0')}`;
+        breakdown[monthKey] = {};
+        const logsForMonth = logs.filter(log => {
+          const date = new Date(log.timestamp);
+          return date.getFullYear() === selectedYear && date.getMonth() === i;
+        });
+        activitiesData.forEach(activity => {
+          const totalMinutes = logsForMonth
+            .filter(log => log.activityId === activity.id)
+            .reduce((sum, log) => sum + log.duration, 0);
+          if (totalMinutes > 0) {
+            breakdown[monthKey][activity.id] = totalMinutes;
+          }
+        });
+      }
+
+      setMonthlyBreakdown(breakdown);
+    } catch (error) {
+      console.error('Error loading summary data:', error);
+      setError('Failed to load summary data');
+    } finally {
+      setIsLoading(false);
+    }
   }, [selectedYear]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const handleUpdate = () => {
+      loadData();
+    };
+
+    window.addEventListener('timeLogUpdated', handleUpdate);
+    return () => {
+      window.removeEventListener('timeLogUpdated', handleUpdate);
+    };
+  }, [loadData]);
 
   // Get all unique activity names for filtering
   const allActivityNames = useMemo(() => {
@@ -311,8 +323,14 @@ export default function Summary() {
           label: (context: TooltipItem<'pie'>) => {
             const value = context.raw as number;
             const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
-            const percentage = ((value / total) * 100).toFixed(0);
             const label = context.label || '';
+            
+            // Guard against division by zero when no time is logged
+            if (total === 0) {
+              return `${label} (No data)`;
+            }
+            
+            const percentage = ((value / total) * 100).toFixed(0);
             return `${label} (${percentage}%)`;
           },
         },

@@ -231,7 +231,7 @@ export default function GoalsPage() {
         </div>
       )}
 
-      <div className={`grid gap-${compactView ? '3' : '6'} grid-cols-1 sm:grid-cols-2 lg:grid-cols-3`}>
+      <div className={`grid ${compactView ? 'gap-3' : 'gap-6'} grid-cols-1 sm:grid-cols-2 lg:grid-cols-3`}>
         {goals.map((goal) => {
           const activity = activities.find(a => a.id === goal.activityId);
           const progress = calculateProgress(goal);

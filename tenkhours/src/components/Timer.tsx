@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
-import { Activity, TimeLog, TimerSettings, TimerState } from '@/types';
-import { saveTimeLog, updateActivityTotalTime, getTimerState, saveTimerState } from '@/utils/storage';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { Activity, TimerSettings, TimerState } from '@/types';
+import { getTimerState, saveTimerState } from '@/utils/storage';
 import Skeleton from './Skeleton';
 
 interface TimerProps {
@@ -95,6 +95,36 @@ export default function Timer({ settings, activity, onComplete }: TimerProps) {
     saveState();
   }, [activity.id, selectedDuration, timeLeft, isRunning, isPaused]);
 
+  const handleComplete = useCallback(async (actualDuration: number) => {
+    try {
+      setIsLoading(true);
+      // Await the onComplete callback to ensure data is saved before proceeding
+      await onComplete(actualDuration);
+      // Clear timer state after completion
+      const state: TimerState = {
+        activityId: null,
+        startTime: null,
+        pausedTime: null,
+        totalPausedTime: 0,
+        selectedDuration: settings.focusDuration,
+        timeLeft: settings.focusDuration * 60,
+        isRunning: false,
+        isPaused: false
+      };
+      await saveTimerState(state);
+    } catch (error) {
+      console.error('Error completing timer:', error);
+      // Reset UI state on error to allow retry
+      setIsCompleted(false);
+      setIsRunning(false);
+      setIsPaused(false);
+      // Show error to user
+      alert('Failed to save session data. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [onComplete, settings.focusDuration]);
+
   useEffect(() => {
     setTimeLeft(selectedDuration * 60);
     targetTimeRef.current = selectedDuration * 60 * 1000;
@@ -135,7 +165,7 @@ export default function Timer({ settings, activity, onComplete }: TimerProps) {
         cancelAnimationFrame(animationFrameId);
       }
     };
-  }, [isRunning, selectedDuration]);
+  }, [isRunning, selectedDuration, handleComplete]);
 
   useEffect(() => {
     return () => {
@@ -173,30 +203,7 @@ export default function Timer({ settings, activity, onComplete }: TimerProps) {
   const circumference = 2 * Math.PI * 90; // radius = 90
   const strokeDashoffset = circumference - (progress / 100) * circumference;
 
-  const handleComplete = async (actualDuration: number) => {
-    try {
-      setIsLoading(true);
-      onComplete(actualDuration);
-      // Clear timer state after completion
-      const state: TimerState = {
-        activityId: null,
-        startTime: null,
-        pausedTime: null,
-        totalPausedTime: 0,
-        selectedDuration: settings.focusDuration,
-        timeLeft: settings.focusDuration * 60,
-        isRunning: false,
-        isPaused: false
-      };
-      await saveTimerState(state);
-    } catch (error) {
-      console.error('Error completing timer:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleFinishEarly = () => {
+  const handleFinishEarly = async () => {
     const elapsedSeconds = startTimeRef.current 
       ? Math.floor((Date.now() - startTimeRef.current - totalPausedTimeRef.current) / 1000)
       : 0;
@@ -205,7 +212,7 @@ export default function Timer({ settings, activity, onComplete }: TimerProps) {
     setIsRunning(false);
     setIsPaused(false);
     setIsCompleted(true);
-    handleComplete(actualMinutes);
+    await handleComplete(actualMinutes);
   };
 
   const formatTime = (seconds: number) => {
@@ -408,7 +415,7 @@ export default function Timer({ settings, activity, onComplete }: TimerProps) {
         </button>
         {isRunning && (
           <button
-            onClick={handleFinishEarly}
+            onClick={() => handleFinishEarly()}
             className="px-4 py-2.5 rounded-lg text-white font-medium bg-emerald-600 hover:bg-emerald-700 
                      flex items-center gap-2 min-w-[100px] justify-center transition-colors duration-200 disabled:opacity-50"
             disabled={isLoading}
