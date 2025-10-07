@@ -3,7 +3,7 @@
 
 
 
-![image](https://github.com/user-attachments/assets/4a79c758-f9a9-416f-9916-b64cf414690f)
+<img width="2559" height="1272" alt="image" src="https://github.com/user-attachments/assets/616076f1-53cd-432c-9d07-2ee559fae14e" />
 ![image](https://github.com/user-attachments/assets/2e62de67-c09d-44b6-838f-86c19fddd7c0)
 
 
