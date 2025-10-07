@@ -1,86 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-// import { Activity, TimeLog, Goal, TimerState } from '@/types';
-import fs from 'fs';
-import path from 'path';
+import { getDb } from '@/utils/mongodb';
 
-const DATA_DIR = path.join(process.cwd(), 'src', 'data');
-const ACTIVITIES_FILE = path.join(DATA_DIR, 'activities.json');
-const TIME_LOGS_FILE = path.join(DATA_DIR, 'timeLogs.json');
-const GOALS_FILE = path.join(DATA_DIR, 'goals.json');
-const TIMER_STATE_FILE = path.join(DATA_DIR, 'timerState.json');
+type CollectionName = 'activities' | 'timeLogs' | 'goals' | 'timerState';
 
-// Helper function to get storage data
-const getStorageData = (type: string): any[] | any => {
-  try {
-    let filePath;
-    switch (type) {
-      case 'activities':
-        filePath = ACTIVITIES_FILE;
-        break;
-      case 'timeLogs':
-        filePath = TIME_LOGS_FILE;
-        break;
-      case 'goals':
-        filePath = GOALS_FILE;
-        break;
-      case 'timerState':
-        filePath = TIMER_STATE_FILE;
-        if (!fs.existsSync(filePath)) {
-          fs.writeFileSync(filePath, 'null', 'utf8');
-          return null;
-        }
-        const timerData = fs.readFileSync(filePath, 'utf8');
-        return timerData === 'null' ? null : JSON.parse(timerData);
-      default:
-        throw new Error('Invalid storage type');
-    }
-
-    if (!fs.existsSync(filePath)) {
-      fs.writeFileSync(filePath, '[]', 'utf8');
-      return [];
-    }
-
-    const data = fs.readFileSync(filePath, 'utf8');
-    return JSON.parse(data);
-  } catch (error) {
-    console.error(`Error reading ${type} data:`, error);
-    return type === 'timerState' ? null : [];
+function resolveCollection(type: string): CollectionName {
+  switch (type) {
+    case 'activities':
+    case 'timeLogs':
+    case 'goals':
+    case 'timerState':
+      return type;
+    default:
+      throw new Error('Invalid storage type');
   }
-};
-
-// Helper function to save storage data
-const setStorageData = (type: string, data: any[] | any): void => {
-  try {
-    let filePath;
-    switch (type) {
-      case 'activities':
-        filePath = ACTIVITIES_FILE;
-        break;
-      case 'timeLogs':
-        filePath = TIME_LOGS_FILE;
-        break;
-      case 'goals':
-        filePath = GOALS_FILE;
-        break;
-      case 'timerState':
-        filePath = TIMER_STATE_FILE;
-        break;
-      default:
-        throw new Error('Invalid storage type');
-    }
-
-    // Ensure the directory exists
-    if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
-    }
-
-    const content = type === 'timerState' && data === null ? 'null' : JSON.stringify(data, null, 2);
-    fs.writeFileSync(filePath, content, 'utf8');
-  } catch (error) {
-    console.error(`Error writing ${type} data:`, error);
-    throw error;
-  }
-};
+}
 
 export async function GET(request: NextRequest) {
   const type = request.nextUrl.searchParams.get('type');
@@ -89,8 +22,14 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const data = getStorageData(type);
-    return NextResponse.json(data);
+    const collection = resolveCollection(type);
+    const db = await getDb();
+    if (collection === 'timerState') {
+      const state = await db.collection(collection).findOne({ key: 'singleton' });
+      return NextResponse.json(state ? state.value : null);
+    }
+    const items = await db.collection(collection).find({}).toArray();
+    return NextResponse.json(items);
   } catch (error) {
     console.error('GET error:', error);
     return NextResponse.json({ error: 'Failed to fetch data' }, { status: 500 });
@@ -104,14 +43,18 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    const collection = resolveCollection(type);
     const newItem = await request.json();
-    if (type === 'timerState') {
-      setStorageData(type, newItem);
+    const db = await getDb();
+    if (collection === 'timerState') {
+      await db.collection(collection).updateOne(
+        { key: 'singleton' },
+        { $set: { value: newItem }, $setOnInsert: { key: 'singleton' } },
+        { upsert: true }
+      );
       return NextResponse.json(newItem);
     }
-    const items = getStorageData(type);
-    items.push(newItem);
-    setStorageData(type, items);
+    await db.collection(collection).insertOne(newItem);
     return NextResponse.json(newItem);
   } catch (error) {
     console.error('POST error:', error);
@@ -127,21 +70,24 @@ export async function PUT(request: NextRequest) {
   }
 
   try {
+    const collection = resolveCollection(type);
     const updatedItem = await request.json();
-    if (type === 'timerState') {
-      setStorageData(type, updatedItem);
+    const db = await getDb();
+    if (collection === 'timerState') {
+      await db.collection(collection).updateOne(
+        { key: 'singleton' },
+        { $set: { value: updatedItem }, $setOnInsert: { key: 'singleton' } },
+        { upsert: true }
+      );
       return NextResponse.json(updatedItem);
     }
     if (!id) {
       return NextResponse.json({ error: 'ID parameter is required' }, { status: 400 });
     }
-    const items = getStorageData(type);
-    const index = items.findIndex((item: any) => item.id === id);
-    if (index === -1) {
+    const result = await db.collection(collection).updateOne({ id }, { $set: updatedItem });
+    if (result.matchedCount === 0) {
       return NextResponse.json({ error: 'Item not found' }, { status: 404 });
     }
-    items[index] = updatedItem;
-    setStorageData(type, items);
     return NextResponse.json(updatedItem);
   } catch (error) {
     console.error('PUT error:', error);
@@ -157,13 +103,13 @@ export async function DELETE(request: NextRequest) {
   }
 
   try {
-    if (type === 'timerState') {
-      setStorageData(type, null);
+    const collection = resolveCollection(type);
+    const db = await getDb();
+    if (collection === 'timerState') {
+      await db.collection(collection).deleteOne({ key: 'singleton' });
       return NextResponse.json({ success: true });
     }
-    const items = getStorageData(type);
-    const filteredItems = items.filter((item: any) => item.id !== id);
-    setStorageData(type, filteredItems);
+    await db.collection(collection).deleteOne({ id });
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('DELETE error:', error);
