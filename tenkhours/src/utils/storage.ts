@@ -1,10 +1,12 @@
 import { Activity, TimeLog, Goal, TimerState } from '@/types';
 import * as clientStorage from './clientStorage';
+import { ensureActivityColors } from './activityColors';
 
 // Activities
 export async function getActivities(): Promise<Activity[]> {
   try {
-    return await clientStorage.getActivities();
+    const activities = await clientStorage.getActivities();
+    return ensureActivityColors(activities);
   } catch (error) {
     console.error('Error getting activities:', error);
     return [];
@@ -230,7 +232,22 @@ export async function saveTimerState(state: TimerState): Promise<void> {
 // Goals
 export async function getGoals(): Promise<Goal[]> {
   try {
-    return await clientStorage.getGoals();
+    const rawGoals = await clientStorage.getGoals();
+    return rawGoals.map((goal) => {
+      const migrated = goal as Goal & { activityId?: string };
+      const idsFromData = migrated.activityIds && migrated.activityIds.length > 0
+        ? migrated.activityIds
+        : migrated.activityId
+          ? [migrated.activityId]
+          : [];
+      const normalizedIds = Array.from(new Set(idsFromData));
+      const sanitized = {
+        ...migrated,
+        activityIds: normalizedIds,
+      } as Goal;
+      delete (sanitized as Record<string, unknown>).activityId;
+      return sanitized;
+    });
   } catch (error) {
     console.error('Error getting goals:', error);
     return [];
@@ -279,3 +296,7 @@ export async function getValidatedTimeLogs(): Promise<TimeLog[]> {
   }
   return validLogs;
 } 
+
+
+
+

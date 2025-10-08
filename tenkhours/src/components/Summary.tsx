@@ -13,6 +13,7 @@ import {
   TooltipItem
 } from 'chart.js';
 import { getTimeLogSummary } from '@/utils/timeLogUtils';
+import { getPalette } from '@/utils/activityColors';
 import { getActivities, getValidatedTimeLogs } from '@/utils/storage';
 import { Activity, TimeLog } from '@/types';
 
@@ -231,7 +232,14 @@ export default function Summary() {
   };
 
   // Use activity colors for pie chart
-  const pieColors = filteredActivities.map(activity => activity.color);
+  const fallbackPalette = useMemo(() => getPalette(), []);
+
+  const pieColors = filteredActivities.map((activity, index) => {
+    if (activity.color) {
+      return activity.color;
+    }
+    return fallbackPalette[index % fallbackPalette.length] || '#4F46E5';
+  });
 
   // --- PIE CHART DATA FILTERING ---
   // Get filtered logs for pie chart
@@ -420,3 +428,8 @@ export default function Summary() {
     </div>
   );
 } 
+
+
+
+
+

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Activity } from '@/types';
+import { getNextActivityColor } from '@/utils/activityColors';
 import { getActivities, saveActivity, updateActivity, deleteActivityWithReferentialIntegrity } from '@/utils/storage';
 
 interface ActivityTagProps {
@@ -37,7 +38,7 @@ export default function ActivityTag({ onSelectActivity }: ActivityTagProps) {
           id: Date.now().toString(),
           name: newActivity.trim(),
           totalTime: 0,
-          color: '#4F46E5',
+          color: getNextActivityColor(activities),
         };
         await saveActivity(activity);
         setActivities(prevActivities => [...prevActivities, activity]);
@@ -64,8 +65,8 @@ export default function ActivityTag({ onSelectActivity }: ActivityTagProps) {
           name: editText.trim(),
         };
         await updateActivity(updatedActivity);
-        setActivities(prevActivities => 
-          prevActivities.map(activity => 
+        setActivities(prevActivities =>
+          prevActivities.map(activity =>
             activity.id === updatedActivity.id ? updatedActivity : activity
           )
         );
@@ -84,7 +85,7 @@ export default function ActivityTag({ onSelectActivity }: ActivityTagProps) {
       try {
         setIsLoading(true);
         await deleteActivityWithReferentialIntegrity(activityId);
-        setActivities(prevActivities => 
+        setActivities(prevActivities =>
           prevActivities.filter(activity => activity.id !== activityId)
         );
       } catch (error) {
@@ -185,4 +186,4 @@ export default function ActivityTag({ onSelectActivity }: ActivityTagProps) {
       </div>
     </div>
   );
-} 
+}

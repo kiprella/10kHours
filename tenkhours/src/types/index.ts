@@ -9,10 +9,11 @@ export interface Goal {
   id: string;
   name: string;
   targetHours: number;
-  activityId: string;
+  activityIds: string[];\n  activityId?: string; // legacy support
   createdAt: number;
   completedAt?: number;
   description?: string;
+  targetDate?: number; // Unix timestamp for target completion date
 }
 
 export interface TimerState {
@@ -33,7 +34,7 @@ export interface TimerSettings {
 
 export type TimeLog = {
   id: string;
-  activityId: string;
+  activityIds: string[];\n  activityId?: string; // legacy support
   duration: number; // in minutes
   timestamp: number;
 };
@@ -57,4 +58,62 @@ export type TimeLogSummary = {
     year: string;
     minutes: number;
   }>;
-}; 
+};
+
+// Velocity Insights Types
+export interface WeeklyVelocityData {
+  week: string;
+  hours: number;
+  sessions: number;
+  date: Date;
+}
+
+export interface VelocityData {
+  weeklyData: WeeklyVelocityData[];
+  averageSlope: number; // hours per week
+  currentStreak: number; // consecutive weeks meeting minimum target
+  longestStreak: number;
+  lastMissWeek?: string;
+  momentumScore: number; // 0-100
+  momentumTrend: 'rising' | 'flat' | 'declining';
+  momentumChange: number; // percentage change vs last month
+}
+
+export interface StreakData {
+  current: number;
+  longest: number;
+  lastMiss?: string;
+  minimumSessions: number;
+}
+
+export interface MomentumScore {
+  score: number; // 0-100
+  trend: 'rising' | 'flat' | 'declining';
+  change: number; // percentage change
+  factors: {
+    rollingAverage: number;
+    variance: number;
+    recentGrowth: number;
+  };
+}
+
+export interface SessionQuality {
+  averageSessionLength: number;
+  focusDayAverage: number;
+  nonFocusDayAverage: number;
+  bestWeek: WeeklyVelocityData;
+  unusualSessions: Array<{
+    type: 'long' | 'short';
+    duration: number;
+    date: string;
+  }>;
+}
+
+export interface MilestonePacing {
+  targetDate?: Date;
+  requiredWeeklyHours: number;
+  currentWeeklyHours: number;
+  gap: number; // hours per week needed
+  isOnTrack: boolean;
+} 
+
