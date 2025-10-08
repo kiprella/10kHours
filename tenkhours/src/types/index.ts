@@ -9,7 +9,8 @@ export interface Goal {
   id: string;
   name: string;
   targetHours: number;
-  activityIds: string[];\n  activityId?: string; // legacy support
+  activityIds: string[];
+  activityId?: string; // legacy support
   createdAt: number;
   completedAt?: number;
   description?: string;
@@ -34,7 +35,8 @@ export interface TimerSettings {
 
 export type TimeLog = {
   id: string;
-  activityIds: string[];\n  activityId?: string; // legacy support
+  activityIds: string[];
+  activityId?: string; // legacy support
   duration: number; // in minutes
   timestamp: number;
 };

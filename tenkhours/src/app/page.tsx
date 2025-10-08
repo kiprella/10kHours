@@ -19,7 +19,7 @@ export default function Home() {
 
     const log: TimeLogType = {
       id: crypto.randomUUID(),
-      activityId: selectedActivity.id,
+      activityIds: [selectedActivity.id],
       duration: duration,
       timestamp: Date.now(),
     };

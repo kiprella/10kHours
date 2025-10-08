@@ -75,7 +75,10 @@ export async function updateTimeLogAndAdjustActivity(
     
     // Adjust the activity's total time by the difference
     if (durationDifference !== 0) {
-      await clientStorage.updateActivityTotalTime(updatedLog.activityId, durationDifference);
+      const activityId = updatedLog.activityIds?.[0] || updatedLog.activityId;
+      if (activityId) {
+        await clientStorage.updateActivityTotalTime(activityId, durationDifference);
+      }
     }
     
   } catch (error) {
@@ -111,7 +114,10 @@ export async function deleteTimeLogAndAdjustActivity(logId: string): Promise<voi
     await clientStorage.deleteTimeLog(logId);
     
     // Subtract the duration from the activity's total time
-    await clientStorage.updateActivityTotalTime(originalLog.activityId, -originalLog.duration);
+    const activityId = originalLog.activityIds?.[0] || originalLog.activityId;
+    if (activityId) {
+      await clientStorage.updateActivityTotalTime(activityId, -originalLog.duration);
+    }
     
   } catch (error) {
     console.error('Error deleting time log and adjusting activity:', error);
@@ -140,17 +146,22 @@ export async function addTimeLogAndUpdateActivity(log: TimeLog): Promise<void> {
   try {
     // Get the original activity state for potential rollback
     const activities = await clientStorage.getActivities();
-    originalActivity = activities.find(a => a.id === log.activityId) || null;
+    const activityId = log.activityIds?.[0] || log.activityId;
+    originalActivity = activities.find(a => a.id === activityId) || null;
     
     // Save the time log first
     await clientStorage.saveTimeLog(log);
     timeLogSaved = true;
     
     // Update the activity total time
-    await clientStorage.updateActivityTotalTime(log.activityId, log.duration);
+    if (activityId) {
+      await clientStorage.updateActivityTotalTime(activityId, log.duration);
+    }
     
   } catch (error) {
     console.error('Error saving time log and updating activity:', error);
+    console.error('Time log data:', JSON.stringify(log, null, 2));
+    console.error('Activity ID:', log.activityIds?.[0] || log.activityId);
     
     // Attempt rollback if time log was saved but activity update failed
     if (timeLogSaved) {
@@ -173,6 +184,7 @@ export async function addTimeLogAndUpdateActivity(log: TimeLog): Promise<void> {
         // Log the inconsistency for manual resolution
         console.error('DATA INCONSISTENCY: Time log may be orphaned. Manual intervention may be required.');
         console.error('Orphaned log ID:', log.id);
+        console.error('Original activity state:', originalActivity);
       }
     }
     
@@ -203,7 +215,10 @@ export async function deleteActivity(activityId: string): Promise<void> {
  */
 export async function deleteActivityWithReferentialIntegrity(activityId: string): Promise<void> {
   const logs = await clientStorage.getTimeLogs();
-  const hasLogs = logs.some(log => log.activityId === activityId);
+  const hasLogs = logs.some(log => 
+    (log.activityIds && log.activityIds.includes(activityId)) || 
+    log.activityId === activityId
+  );
   if (hasLogs) {
     throw new Error('Cannot delete activity: time logs exist for this activity.');
   }
@@ -245,7 +260,7 @@ export async function getGoals(): Promise<Goal[]> {
         ...migrated,
         activityIds: normalizedIds,
       } as Goal;
-      delete (sanitized as Record<string, unknown>).activityId;
+      delete (sanitized as unknown as Record<string, unknown>).activityId;
       return sanitized;
     });
   } catch (error) {
@@ -290,7 +305,10 @@ export async function getValidatedTimeLogs(): Promise<TimeLog[]> {
     clientStorage.getActivities()
   ]);
   const activityIds = new Set(activities.map(a => a.id));
-  const validLogs = logs.filter(log => activityIds.has(log.activityId));
+  const validLogs = logs.filter(log => {
+    const logActivityId = log.activityIds?.[0] || log.activityId;
+    return logActivityId && activityIds.has(logActivityId);
+  });
   if (validLogs.length !== logs.length) {
     console.warn('Orphaned time logs found and excluded.');
   }

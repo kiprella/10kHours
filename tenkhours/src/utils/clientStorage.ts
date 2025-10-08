@@ -7,6 +7,22 @@ export const STORAGE_KEYS = {
   TIMER_STATE: 'timerState'
 } as const;
 
+function stripMongoIds<T>(value: T): T {
+  if (Array.isArray(value)) {
+    return value.map(item => stripMongoIds(item)) as unknown as T;
+  }
+  if (value && typeof value === 'object') {
+    if (value instanceof Date) {
+      return value;
+    }
+    const entries = Object.entries(value as Record<string, unknown>)
+      .filter(([key]) => key !== '_id')
+      .map(([key, val]) => [key, stripMongoIds(val)]);
+    return Object.fromEntries(entries) as unknown as T;
+  }
+  return value;
+}
+
 // Generic function to get data from storage
 export async function getStorageData<T>(type: string): Promise<T[]> {
   try {
@@ -38,7 +54,7 @@ export async function setStorageData<T>(type: string, data: T[]): Promise<void> 
     const response = await fetch(`/api/storage?type=${type}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
+      body: JSON.stringify(stripMongoIds(data))
     });
     if (!response.ok) throw new Error('Failed to save data');
   } catch (error) {
@@ -53,7 +69,7 @@ export async function setStorageItem<T>(type: string, data: T): Promise<void> {
     const response = await fetch(`/api/storage?type=${type}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
+      body: JSON.stringify(stripMongoIds(data))
     });
     if (!response.ok) throw new Error('Failed to save data');
   } catch (error) {
@@ -70,23 +86,32 @@ export async function getActivities(): Promise<Activity[]> {
 export async function saveActivity(activity: Activity): Promise<void> {
   const activities = await getActivities();
   const existingIndex = activities.findIndex(a => a.id === activity.id);
+  const payload = stripMongoIds(activity);
   
   if (existingIndex !== -1) {
     // Update existing activity
     const response = await fetch(`/api/storage?type=${STORAGE_KEYS.ACTIVITIES}&id=${activity.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(activity)
+      body: JSON.stringify(payload)
     });
-    if (!response.ok) throw new Error('Failed to update activity');
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Activity update failed:', response.status, errorText);
+      throw new Error(`Failed to update activity: ${response.status} ${errorText}`);
+    }
   } else {
     // Create new activity
     const response = await fetch(`/api/storage?type=${STORAGE_KEYS.ACTIVITIES}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(activity)
+      body: JSON.stringify(payload)
     });
-    if (!response.ok) throw new Error('Failed to save activity');
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Activity creation failed:', response.status, errorText);
+      throw new Error(`Failed to save activity: ${response.status} ${errorText}`);
+    }
   }
 }
 
@@ -111,7 +136,7 @@ export async function saveTimeLog(log: TimeLog): Promise<void> {
   const response = await fetch(`/api/storage?type=${STORAGE_KEYS.TIME_LOGS}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(log)
+    body: JSON.stringify(stripMongoIds(log))
   });
   if (!response.ok) throw new Error('Failed to save time log');
 }
@@ -120,7 +145,7 @@ export async function updateTimeLog(log: TimeLog): Promise<void> {
   const response = await fetch(`/api/storage?type=${STORAGE_KEYS.TIME_LOGS}&id=${log.id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(log)
+    body: JSON.stringify(stripMongoIds(log))
   });
   if (!response.ok) throw new Error('Failed to update time log');
 }
@@ -202,7 +227,7 @@ export async function saveTimerState(state: TimerState): Promise<void> {
     const response = await fetch(`/api/storage?type=${STORAGE_KEYS.TIMER_STATE}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(state)
+      body: JSON.stringify(stripMongoIds(state))
     });
     if (!response.ok) throw new Error('Failed to save timer state');
   } catch (error) {
@@ -232,7 +257,7 @@ export async function saveGoal(goal: Goal): Promise<void> {
   const response = await fetch(`/api/storage?type=${STORAGE_KEYS.GOALS}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(goal)
+    body: JSON.stringify(stripMongoIds(goal))
   });
   if (!response.ok) throw new Error('Failed to save goal');
 }
@@ -241,7 +266,7 @@ export async function updateGoal(goal: Goal): Promise<void> {
   const response = await fetch(`/api/storage?type=${STORAGE_KEYS.GOALS}&id=${goal.id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(goal)
+    body: JSON.stringify(stripMongoIds(goal))
   });
   if (!response.ok) throw new Error('Failed to update goal');
 }

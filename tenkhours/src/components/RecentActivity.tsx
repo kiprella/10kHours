@@ -3,6 +3,9 @@ import { TimeLog, Activity } from '@/types';
 import { getValidatedTimeLogs, getActivities, updateTimeLogAndAdjustActivity, deleteTimeLogAndAdjustActivity } from '@/utils/storage';
 import Skeleton from './Skeleton';
 
+const getPrimaryActivityId = (log: TimeLog): string =>
+  log.activityIds?.[0] ?? log.activityId ?? '';
+
 export default function RecentActivity() {
   const [timeLogs, setTimeLogs] = useState<TimeLog[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -26,7 +29,7 @@ export default function RecentActivity() {
 
       const uniqueLogsMap = new Map<string, TimeLog>();
       logs.forEach(log => {
-        const key = `${log.activityId}-${log.timestamp}`;
+        const key = `${getPrimaryActivityId(log)}-${log.timestamp}`;
         if (!uniqueLogsMap.has(key)) {
           uniqueLogsMap.set(key, log);
         }
@@ -85,7 +88,7 @@ export default function RecentActivity() {
     setEditingLogId(log.id);
     setEditForm({
       duration: log.duration,
-      activityId: log.activityId,
+      activityId: getPrimaryActivityId(log),
       timestamp: log.timestamp
     });
   };
@@ -99,9 +102,11 @@ export default function RecentActivity() {
     if (!editingLogId) return;
 
     try {
+      const primaryActivityId = editForm.activityId;
       const updatedLog: TimeLog = {
         id: editingLogId,
-        activityId: editForm.activityId,
+        activityId: primaryActivityId,
+        activityIds: primaryActivityId ? [primaryActivityId] : [],
         duration: editForm.duration,
         timestamp: editForm.timestamp
       };
@@ -174,13 +179,14 @@ export default function RecentActivity() {
         ) : (
           <>
             {timeLogs.map((log) => {
-              const activity = activities.find(a => a.id === log.activityId);
+              const activityId = getPrimaryActivityId(log);
+              const activity = activities.find(a => a.id === activityId);
               const isEditing = editingLogId === log.id;
               
               if (isEditing) {
                 return (
                   <div
-                    key={`${log.activityId}-${log.timestamp}`}
+                    key={log.id}
                     className="p-4 bg-blue-50 rounded-lg border border-blue-200"
                   >
                     <div className="space-y-3">
@@ -247,7 +253,7 @@ export default function RecentActivity() {
               
               return (
                 <div
-                  key={`${log.activityId}-${log.timestamp}`}
+                  key={log.id}
                   className="flex justify-between items-center p-3 bg-slate-50 rounded-lg border border-slate-200 group hover:bg-slate-100"
                 >
                   <div className="flex flex-col">

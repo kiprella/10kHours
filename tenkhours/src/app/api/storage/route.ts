@@ -84,8 +84,21 @@ export async function PUT(request: NextRequest) {
     if (!id) {
       return NextResponse.json({ error: 'ID parameter is required' }, { status: 400 });
     }
-    const result = await db.collection(collection).updateOne({ id }, { $set: updatedItem });
+    if (typeof updatedItem !== 'object' || updatedItem === null) {
+      return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
+    }
+
+    console.log(`Updating ${collection} with id: ${id}`);
+    console.log('Updated item:', JSON.stringify(updatedItem, null, 2));
+
+    const { _id: _mongoId, id: _clientId, ...updateData } = updatedItem as Record<string, unknown>;
+    console.log('Update data (without id and _id):', JSON.stringify(updateData, null, 2));
+
+    const result = await db.collection(collection).updateOne({ id }, { $set: updateData });
+    console.log('Update result:', result);
+    
     if (result.matchedCount === 0) {
+      console.log(`No document found with id: ${id}`);
       return NextResponse.json({ error: 'Item not found' }, { status: 404 });
     }
     return NextResponse.json(updatedItem);
@@ -109,7 +122,9 @@ export async function DELETE(request: NextRequest) {
       await db.collection(collection).deleteOne({ key: 'singleton' });
       return NextResponse.json({ success: true });
     }
-    await db.collection(collection).deleteOne({ id });
+    console.log(`Deleting ${collection} with id: ${id}`);
+    const result = await db.collection(collection).deleteOne({ id });
+    console.log('Delete result:', result);
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('DELETE error:', error);
