@@ -17,6 +17,10 @@ import { getPalette } from '@/utils/activityColors';
 import { getActivities, getValidatedTimeLogs } from '@/utils/storage';
 import { Activity, TimeLog } from '@/types';
 
+// Helper function to get primary activity ID from a time log
+const getPrimaryActivityId = (log: TimeLog): string =>
+  log.activityIds?.[0] ?? log.activityId ?? '';
+
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -78,7 +82,7 @@ export default function Summary() {
         });
         activitiesData.forEach(activity => {
           const totalMinutes = logsForMonth
-            .filter(log => log.activityId === activity.id)
+            .filter(log => getPrimaryActivityId(log) === activity.id)
             .reduce((sum, log) => sum + log.duration, 0);
           if (totalMinutes > 0) {
             breakdown[monthKey][activity.id] = totalMinutes;
@@ -129,7 +133,7 @@ export default function Summary() {
   const filteredTimeLogs = useMemo(() => {
     if (!selectedTag) return timeLogs;
     const filteredIds = new Set(filteredActivities.map(a => a.id));
-    return timeLogs.filter(log => filteredIds.has(log.activityId));
+    return timeLogs.filter(log => filteredIds.has(getPrimaryActivityId(log)));
   }, [timeLogs, filteredActivities, selectedTag]);
 
   // --- Monthly Hours (Line Chart) Calculation ---
@@ -144,7 +148,7 @@ export default function Summary() {
       });
       // Only count logs for filtered activities
       const filteredIds = new Set(filteredActivities.map(a => a.id));
-      const minutes = logsForMonth.filter(log => filteredIds.has(log.activityId)).reduce((sum, log) => sum + log.duration, 0);
+      const minutes = logsForMonth.filter(log => filteredIds.has(getPrimaryActivityId(log))).reduce((sum, log) => sum + log.duration, 0);
       return {
         month,
         monthKey,
@@ -263,8 +267,9 @@ export default function Summary() {
       result[activity.id] = 0;
     });
     pieLogs.forEach(log => {
-      if (result[log.activityId] !== undefined) {
-        result[log.activityId] += log.duration;
+      const activityId = getPrimaryActivityId(log);
+      if (result[activityId] !== undefined) {
+        result[activityId] += log.duration;
       }
     });
     return result;

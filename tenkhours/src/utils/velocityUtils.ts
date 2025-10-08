@@ -195,7 +195,12 @@ export function calculateSessionQuality(
 ): SessionQuality {
   const idSet = new Set(goalActivityIds);
 
-  const goalLogs = timeLogs.filter(log => idSet.has(log.activityId));
+  const goalLogs = timeLogs.filter(log => {
+    if (log.activityIds) {
+      return log.activityIds.some(id => idSet.has(id));
+    }
+    return log.activityId ? idSet.has(log.activityId) : false;
+  });
   
   if (goalLogs.length === 0) {
     return {
@@ -277,7 +282,12 @@ export function calculateMilestonePacing(
   const activityIdSet = new Set(goal.activityIds);
 
   // Calculate current progress from all time logs for this goal
-  const goalLogs = timeLogs.filter(log => activityIdSet.has(log.activityId));
+  const goalLogs = timeLogs.filter(log => {
+    if (log.activityIds) {
+      return log.activityIds.some(id => activityIdSet.has(id));
+    }
+    return log.activityId ? activityIdSet.has(log.activityId) : false;
+  });
   const currentProgress = goalLogs.reduce((sum, log) => sum + log.duration, 0) / 60; // Convert minutes to hours
   
   // Calculate current weekly pace from recent activity

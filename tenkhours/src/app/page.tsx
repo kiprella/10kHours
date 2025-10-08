@@ -5,6 +5,7 @@ import Timer from '@/components/Timer';
 import ActivityTag from '@/components/ActivityTag';
 import RecentActivity from '@/components/RecentActivity';
 import Summary from '@/components/Summary';
+import CustomTimeLog from '@/components/CustomTimeLog';
 import { Activity, TimerSettings, TimeLog as TimeLogType } from '@/types';
 import { addTimeLogAndUpdateActivity } from '@/utils/storage';
 
@@ -65,6 +66,10 @@ export default function Home() {
 
             <section className="card">
               <RecentActivity />
+            </section>
+
+            <section>
+              <CustomTimeLog />
             </section>
           </div>
 

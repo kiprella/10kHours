@@ -28,7 +28,12 @@ export default function WhatIfExplorer({
       return;
     }
 
-    const goalLogs = timeLogs.filter(log => activityIdSet.has(log.activityId));
+    const goalLogs = timeLogs.filter(log => {
+      if (log.activityIds) {
+        return log.activityIds.some(id => activityIdSet.has(id));
+      }
+      return log.activityId ? activityIdSet.has(log.activityId) : false;
+    });
     const currentProgress = goalLogs.reduce((sum, log) => sum + log.duration, 0) / 60; // Convert minutes to hours
     const hoursRemaining = goal.targetHours - currentProgress;
     
