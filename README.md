@@ -1,10 +1,10 @@
-"The key to achieving true expertise in any skill is simply a matter of practicing, albeit in the correct way, for at least 10 000 hours" - Malcolm Gladwell's 
+
  
 
 
 
 <img width="2559" height="1272" alt="image" src="https://github.com/user-attachments/assets/616076f1-53cd-432c-9d07-2ee559fae14e" />
-![image](https://github.com/user-attachments/assets/2e62de67-c09d-44b6-838f-86c19fddd7c0)
+
 
 
 
