@@ -1,4 +1,4 @@
-import { TimeLog, WeeklyVelocityData, VelocityData, StreakData, MomentumScore, SessionQuality, MilestonePacing } from '@/types';
+import { TimeLog, WeeklyVelocityData, VelocityData, StreakData, MomentumScore, SessionQuality } from '@/types';
 
 /**
  * Get ISO week number for a date using proper ISO 8601 week calculation
@@ -450,12 +450,18 @@ export function calculateSessionQuality(
 ): SessionQuality {
   const idSet = new Set(goalActivityIds);
 
-  const goalLogs = timeLogs.filter(log => {
+  let goalLogs = timeLogs.filter(log => {
     if (log.activityIds) {
       return log.activityIds.some(id => idSet.has(id));
     }
     return log.activityId ? idSet.has(log.activityId) : false;
   });
+
+  if (weeklyData.length > 0) {
+    const windowStart = new Date(weeklyData[0].date).getTime();
+    const windowEnd = new Date(weeklyData[weeklyData.length - 1].date).getTime() + 7 * 24 * 60 * 60 * 1000;
+    goalLogs = goalLogs.filter(log => log.timestamp >= windowStart && log.timestamp < windowEnd);
+  }
   
   if (goalLogs.length === 0) {
     return {
@@ -524,82 +530,6 @@ export function calculateSessionQuality(
     nonFocusDayAverage: Math.round(nonFocusDayAverage),
     bestWeek,
     unusualSessions
-  };
-}
-
-/**
- * Calculate milestone pacing for calendar targets
- */
-export function calculateMilestonePacing(
-  goal: { id: string; activityIds: string[]; targetHours: number; createdAt: number; targetDate?: number },
-  timeLogs: TimeLog[],
-  targetDate?: Date
-): MilestonePacing {
-  const activityIdSet = new Set(goal.activityIds);
-
-  // Calculate current progress from all time logs for this goal
-  const goalLogs = timeLogs.filter(log => {
-    if (log.activityIds) {
-      return log.activityIds.some(id => activityIdSet.has(id));
-    }
-    return log.activityId ? activityIdSet.has(log.activityId) : false;
-  });
-  const currentProgress = goalLogs.reduce((sum, log) => sum + log.duration, 0) / 60; // Convert minutes to hours
-  
-  // Calculate current weekly pace from recent activity
-  const recentLogs = goalLogs.filter(log => {
-    const logDate = new Date(log.timestamp);
-    const fourWeeksAgo = new Date(Date.now() - 4 * 7 * 24 * 60 * 60 * 1000);
-    return logDate >= fourWeeksAgo;
-  });
-  
-  // Calculate how many weeks actually have activity in the recent 4-week period
-  const recentWeeks = new Set<string>();
-  recentLogs.forEach(log => {
-    const logDate = new Date(log.timestamp);
-    const { year, week } = getISOWeek(logDate);
-    const weekKey = `${year}-W${String(week).padStart(2, '0')}`;
-    recentWeeks.add(weekKey);
-  });
-  
-  const activeWeeksCount = recentWeeks.size;
-  const currentWeeklyHours = recentLogs.length > 0 && activeWeeksCount > 0
-    ? (recentLogs.reduce((sum, log) => sum + log.duration, 0) / 60) / activeWeeksCount
-    : 0;
-
-  // Use goal's targetDate if no targetDate parameter provided
-  const effectiveTargetDate = targetDate || (goal.targetDate ? new Date(goal.targetDate) : undefined);
-  
-  if (!effectiveTargetDate) {
-    return {
-      requiredWeeklyHours: currentWeeklyHours,
-      currentWeeklyHours,
-      gap: 0,
-      isOnTrack: true
-    };
-  }
-
-  const now = new Date();
-  if (effectiveTargetDate.getTime() < now.getTime()) {
-    return {
-      targetDate: effectiveTargetDate,
-      requiredWeeklyHours: 0,
-      currentWeeklyHours: Math.round(currentWeeklyHours * 10) / 10,
-      gap: 0,
-      isOnTrack: false
-    };
-  }
-
-  const weeksRemaining = Math.max(1, (effectiveTargetDate.getTime() - now.getTime()) / (7 * 24 * 60 * 60 * 1000));
-  const hoursRemaining = goal.targetHours - currentProgress;
-  const requiredWeeklyHours = Math.max(0, hoursRemaining / weeksRemaining);
-
-  return {
-    targetDate: effectiveTargetDate,
-    requiredWeeklyHours: Math.round(requiredWeeklyHours * 10) / 10,
-    currentWeeklyHours: Math.round(currentWeeklyHours * 10) / 10,
-    gap: Math.round((requiredWeeklyHours - currentWeeklyHours) * 10) / 10,
-    isOnTrack: currentWeeklyHours >= requiredWeeklyHours * 0.9 // 90% threshold
   };
 }
 

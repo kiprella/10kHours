@@ -111,14 +111,6 @@ export interface SessionQuality {
   }>;
 }
 
-export interface MilestonePacing {
-  targetDate?: Date;
-  requiredWeeklyHours: number;
-  currentWeeklyHours: number;
-  gap: number; // hours per week needed
-  isOnTrack: boolean;
-}
-
 export interface GoalAward {
   id: string;
   goalId: string;

@@ -1,13 +1,12 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Goal, TimeLog, VelocityData, SessionQuality, MilestonePacing } from '@/types';
-import { calculateVelocityData, calculateSessionQuality, calculateMilestonePacing, calculateMomentumScore } from '@/utils/velocityUtils';
+import { Goal, TimeLog, VelocityData, SessionQuality } from '@/types';
+import { calculateVelocityData, calculateSessionQuality, calculateMomentumScore } from '@/utils/velocityUtils';
 import WeeklyVelocitySparkline from './WeeklyVelocitySparkline';
 import ConsistencyStreak from './ConsistencyStreak';
 import MomentumScore from './MomentumScore';
 import WhatIfExplorer from './WhatIfExplorer';
-import MilestonePacingComponent from './MilestonePacing';
 import SessionQualityNotes from './SessionQualityNotes';
 
 interface VelocityInsightsProps {
@@ -25,7 +24,6 @@ export default function VelocityInsights({
 }: VelocityInsightsProps) {
   const [velocityData, setVelocityData] = useState<VelocityData | null>(null);
   const [sessionQuality, setSessionQuality] = useState<SessionQuality | null>(null);
-  const [milestonePacing, setMilestonePacing] = useState<MilestonePacing | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const calculateInsights = useCallback(async () => {
@@ -44,16 +42,6 @@ export default function VelocityInsights({
       // Calculate session quality
       const quality = calculateSessionQuality(timeLogs, goal.activityIds ?? [], velocity.weeklyData);
       setSessionQuality(quality);
-
-      // Calculate milestone pacing (no target date for now)
-      const pacing = calculateMilestonePacing({
-        id: goal.id,
-        targetHours: goal.targetHours,
-        createdAt: goal.createdAt,
-        activityIds: goal.activityIds,
-        targetDate: goal.targetDate
-      }, timeLogs);
-      setMilestonePacing(pacing);
 
     } catch (error) {
       console.error('Error calculating velocity insights:', error);
@@ -143,13 +131,6 @@ export default function VelocityInsights({
             timeLogs={timeLogs}
             currentWeeklyHours={currentWeeklyHours}
           />
-
-          {/* Milestone pacing */}
-          {milestonePacing && (
-            <MilestonePacingComponent
-              milestonePacing={milestonePacing}
-            />
-          )}
 
           {/* Session quality notes */}
           {sessionQuality && (

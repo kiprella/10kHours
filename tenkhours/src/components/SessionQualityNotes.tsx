@@ -15,6 +15,9 @@ export default function SessionQualityNotes({
   const [isExpanded, setIsExpanded] = useState(false);
 
   const formatDuration = (minutes: number) => {
+    const rounded = Math.round(minutes);
+    if (rounded <= 0) return '0m';
+    minutes = rounded;
     if (minutes < 60) return `${minutes}m`;
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
