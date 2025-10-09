@@ -91,8 +91,9 @@ export default function CustomTimeLog() {
   // Get current date/time for default value
   const getCurrentDateTime = () => {
     const now = new Date();
-    // Format as YYYY-MM-DDTHH:MM for datetime-local input
-    return now.toISOString().slice(0, 16);
+    const tzOffset = now.getTimezoneOffset();
+    const local = new Date(now.getTime() - tzOffset * 60 * 1000);
+    return local.toISOString().slice(0, 16);
   };
 
   return (
