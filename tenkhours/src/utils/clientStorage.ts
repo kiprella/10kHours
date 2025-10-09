@@ -1,10 +1,11 @@
-import { Activity, TimeLog, Goal, TimerState } from '@/types';
+import { Activity, TimeLog, Goal, TimerState, GoalAward } from '@/types';
 
 export const STORAGE_KEYS = {
   ACTIVITIES: 'activities',
   TIME_LOGS: 'timeLogs',
   GOALS: 'goals',
-  TIMER_STATE: 'timerState'
+  TIMER_STATE: 'timerState',
+  GOAL_AWARDS: 'goalAwards'
 } as const;
 
 function stripMongoIds<T>(value: T): T {
@@ -276,4 +277,34 @@ export async function deleteGoal(goalId: string): Promise<void> {
     method: 'DELETE'
   });
   if (!response.ok) throw new Error('Failed to delete goal');
-} 
+}
+
+// Goal Awards
+export async function getGoalAwards(): Promise<GoalAward[]> {
+  return getStorageData<GoalAward>(STORAGE_KEYS.GOAL_AWARDS);
+}
+
+export async function saveGoalAward(award: GoalAward): Promise<void> {
+  const response = await fetch(`/api/storage?type=${STORAGE_KEYS.GOAL_AWARDS}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(stripMongoIds(award))
+  });
+  if (!response.ok) throw new Error('Failed to save goal award');
+}
+
+export async function saveGoalAwards(awards: GoalAward[]): Promise<void> {
+  const response = await fetch(`/api/storage?type=${STORAGE_KEYS.GOAL_AWARDS}&bulk=true`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(awards.map(award => stripMongoIds(award)))
+  });
+  if (!response.ok) throw new Error('Failed to save goal awards');
+}
+
+export async function deleteGoalAwards(goalId: string): Promise<void> {
+  const response = await fetch(`/api/storage?type=${STORAGE_KEYS.GOAL_AWARDS}&goalId=${goalId}`, {
+    method: 'DELETE'
+  });
+  if (!response.ok) throw new Error('Failed to delete goal awards');
+}

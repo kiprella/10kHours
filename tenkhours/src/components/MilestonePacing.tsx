@@ -109,8 +109,10 @@ export default function MilestonePacing({
           <div className="flex justify-between text-xs text-slate-500 mb-1">
             <span>Progress to target</span>
             <span>
-              {milestonePacing.currentWeeklyHours > 0 
+              {milestonePacing.currentWeeklyHours > 0 && milestonePacing.requiredWeeklyHours > 0
                 ? `${Math.min(100, (milestonePacing.currentWeeklyHours / milestonePacing.requiredWeeklyHours) * 100).toFixed(0)}%`
+                : milestonePacing.requiredWeeklyHours === 0
+                ? 'Target reached'
                 : '0%'
               }
             </span>
@@ -121,7 +123,10 @@ export default function MilestonePacing({
                 milestonePacing.isOnTrack ? 'bg-green-500' : 'bg-red-500'
               }`}
               style={{ 
-                width: `${Math.min(100, (milestonePacing.currentWeeklyHours / milestonePacing.requiredWeeklyHours) * 100)}%` 
+                width: `${milestonePacing.requiredWeeklyHours > 0 
+                  ? Math.min(100, (milestonePacing.currentWeeklyHours / milestonePacing.requiredWeeklyHours) * 100)
+                  : 100
+                }%` 
               }}
             />
           </div>

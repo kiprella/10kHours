@@ -94,7 +94,7 @@ export interface MomentumScore {
   change: number; // percentage change
   factors: {
     rollingAverage: number;
-    variance: number;
+    standardDeviation: number;
     recentGrowth: number;
   };
 }
@@ -117,5 +117,18 @@ export interface MilestonePacing {
   currentWeeklyHours: number;
   gap: number; // hours per week needed
   isOnTrack: boolean;
-} 
+}
 
+export interface GoalAward {
+  id: string;
+  goalId: string;
+  percentage: number; // 25, 50, 75, or 100
+  awardedAt: number; // Unix timestamp
+  message: string;
+}
+
+export interface GoalAwardData {
+  awards: GoalAward[];
+  nextMilestone: number | null; // Next percentage milestone to reach
+  progressToNext: number; // Progress toward next milestone (0-100)
+}

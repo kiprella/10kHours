@@ -20,6 +20,11 @@ export default function WhatIfExplorer({
   const [simulatedWeeklyHours, setSimulatedWeeklyHours] = useState(currentWeeklyHours);
   const [simulatedCompletionDate, setSimulatedCompletionDate] = useState<Date | null>(null);
 
+  // Sync simulatedWeeklyHours when currentWeeklyHours prop changes
+  useEffect(() => {
+    setSimulatedWeeklyHours(currentWeeklyHours);
+  }, [currentWeeklyHours]);
+
   const calculateSimulatedCompletion = useCallback(() => {
     // Use cumulative progress from all time logs, not just recent weeks
     const activityIdSet = new Set(goal.activityIds ?? []);
@@ -67,6 +72,7 @@ export default function WhatIfExplorer({
   };
 
   const getCommitmentLabel = (hours: number) => {
+    if (hours === 0) return 'Stopped';
     if (hours < 1) return 'Very light';
     if (hours < 3) return 'Light';
     if (hours < 6) return 'Moderate';
@@ -152,9 +158,9 @@ export default function WhatIfExplorer({
               </div>
               <input
                 type="range"
-                min="0.5"
+                min="0"
                 max="20"
-                step="0.5"
+                step="0.1"
                 value={simulatedWeeklyHours}
                 onChange={(e) => setSimulatedWeeklyHours(parseFloat(e.target.value))}
                 className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer slider"
@@ -198,17 +204,22 @@ export default function WhatIfExplorer({
 
                 {/* Action suggestions */}
                 <div className="text-xs text-slate-600 space-y-1">
+                  {simulatedWeeklyHours === 0 && (
+                    <div className="p-2 bg-red-50 rounded text-red-800">
+                      🛑 <strong>Goal paused:</strong> This would stop all progress toward this goal
+                    </div>
+                  )}
                   {simulatedWeeklyHours > currentWeeklyHours && (
                     <div className="p-2 bg-green-50 rounded text-green-800">
                       💡 <strong>To accelerate:</strong> Add {Math.ceil((simulatedWeeklyHours - currentWeeklyHours) * 60)} minutes to your weekly routine
                     </div>
                   )}
-                  {simulatedWeeklyHours < currentWeeklyHours && (
+                  {simulatedWeeklyHours < currentWeeklyHours && simulatedWeeklyHours > 0 && (
                     <div className="p-2 bg-yellow-50 rounded text-yellow-800">
                       ⚠️ <strong>Slower pace:</strong> This reduces your weekly commitment by {Math.abs(change.value).toFixed(1)} hours
                     </div>
                   )}
-                  {Math.abs(change.value) < 0.5 && (
+                  {Math.abs(change.value) < 0.5 && simulatedWeeklyHours > 0 && (
                     <div className="p-2 bg-blue-50 rounded text-blue-800">
                       ✅ <strong>Steady pace:</strong> Your current commitment is well-balanced
                     </div>

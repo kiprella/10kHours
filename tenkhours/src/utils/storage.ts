@@ -1,4 +1,4 @@
-import { Activity, TimeLog, Goal, TimerState } from '@/types';
+import { Activity, TimeLog, Goal, TimerState, GoalAward } from '@/types';
 import * as clientStorage from './clientStorage';
 import { ensureActivityColors } from './activityColors';
 
@@ -306,15 +306,50 @@ export async function getValidatedTimeLogs(): Promise<TimeLog[]> {
   ]);
   const activityIds = new Set(activities.map(a => a.id));
   const validLogs = logs.filter(log => {
-    const logActivityId = log.activityIds?.[0] || log.activityId;
-    return logActivityId && activityIds.has(logActivityId);
+    if (log.activityIds) {
+      return log.activityIds.some(id => activityIds.has(id));
+    }
+    return log.activityId ? activityIds.has(log.activityId) : false;
   });
   if (validLogs.length !== logs.length) {
     console.warn('Orphaned time logs found and excluded.');
   }
   return validLogs;
-} 
+}
 
+// Goal Awards
+export async function getGoalAwards(): Promise<GoalAward[]> {
+  try {
+    return await clientStorage.getGoalAwards();
+  } catch (error) {
+    console.error('Error getting goal awards:', error);
+    return [];
+  }
+}
 
+export async function saveGoalAward(award: GoalAward): Promise<void> {
+  try {
+    await clientStorage.saveGoalAward(award);
+  } catch (error) {
+    console.error('Error saving goal award:', error);
+    throw error;
+  }
+}
 
+export async function saveGoalAwards(awards: GoalAward[]): Promise<void> {
+  try {
+    await clientStorage.saveGoalAwards(awards);
+  } catch (error) {
+    console.error('Error saving goal awards:', error);
+    throw error;
+  }
+}
 
+export async function deleteGoalAwards(goalId: string): Promise<void> {
+  try {
+    await clientStorage.deleteGoalAwards(goalId);
+  } catch (error) {
+    console.error('Error deleting goal awards:', error);
+    throw error;
+  }
+}

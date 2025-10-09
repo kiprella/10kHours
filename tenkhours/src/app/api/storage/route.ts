@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/utils/mongodb';
 
-type CollectionName = 'activities' | 'timeLogs' | 'goals' | 'timerState';
+type CollectionName = 'activities' | 'timeLogs' | 'goals' | 'timerState' | 'goalAwards';
 
 function resolveCollection(type: string): CollectionName {
   switch (type) {
@@ -9,6 +9,7 @@ function resolveCollection(type: string): CollectionName {
     case 'timeLogs':
     case 'goals':
     case 'timerState':
+    case 'goalAwards':
       return type;
     default:
       throw new Error('Invalid storage type');
@@ -38,6 +39,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const type = request.nextUrl.searchParams.get('type');
+  const bulk = request.nextUrl.searchParams.get('bulk');
   if (!type) {
     return NextResponse.json({ error: 'Type parameter is required' }, { status: 400 });
   }
@@ -54,6 +56,13 @@ export async function POST(request: NextRequest) {
       );
       return NextResponse.json(newItem);
     }
+    
+    if (bulk === 'true' && Array.isArray(newItem)) {
+      // Handle bulk insert for goal awards
+      await db.collection(collection).insertMany(newItem);
+      return NextResponse.json(newItem);
+    }
+    
     await db.collection(collection).insertOne(newItem);
     return NextResponse.json(newItem);
   } catch (error) {
@@ -92,6 +101,9 @@ export async function PUT(request: NextRequest) {
     console.log('Updated item:', JSON.stringify(updatedItem, null, 2));
 
     const { _id: _mongoId, id: _clientId, ...updateData } = updatedItem as Record<string, unknown>;
+    // Suppress unused variable warnings - these are intentionally destructured out
+    void _mongoId;
+    void _clientId;
     console.log('Update data (without id and _id):', JSON.stringify(updateData, null, 2));
 
     const result = await db.collection(collection).updateOne({ id }, { $set: updateData });
@@ -111,8 +123,9 @@ export async function PUT(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   const type = request.nextUrl.searchParams.get('type');
   const id = request.nextUrl.searchParams.get('id');
-  if (!type || (type !== 'timerState' && !id)) {
-    return NextResponse.json({ error: 'Type parameter is required, and ID is required for non-timerState types' }, { status: 400 });
+  const goalId = request.nextUrl.searchParams.get('goalId');
+  if (!type || (type !== 'timerState' && !id && !goalId)) {
+    return NextResponse.json({ error: 'Type parameter is required, and ID or goalId is required for non-timerState types' }, { status: 400 });
   }
 
   try {
@@ -122,6 +135,15 @@ export async function DELETE(request: NextRequest) {
       await db.collection(collection).deleteOne({ key: 'singleton' });
       return NextResponse.json({ success: true });
     }
+    
+    if (goalId && collection === 'goalAwards') {
+      // Delete all awards for a specific goal
+      console.log(`Deleting all goal awards for goalId: ${goalId}`);
+      const result = await db.collection(collection).deleteMany({ goalId });
+      console.log('Delete result:', result);
+      return NextResponse.json({ success: true });
+    }
+    
     console.log(`Deleting ${collection} with id: ${id}`);
     const result = await db.collection(collection).deleteOne({ id });
     console.log('Delete result:', result);

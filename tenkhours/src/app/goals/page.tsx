@@ -1,15 +1,18 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Goal, Activity, TimeLog } from '@/types';
-import { getGoals, saveGoal, updateGoal, deleteGoal, getActivities, getTimeLogs } from '@/utils/storage';
+import { useState, useEffect, useCallback } from 'react';
+import { Goal, Activity, TimeLog, GoalAward } from '@/types';
+import { getGoals, saveGoal, updateGoal, deleteGoal, getActivities, getTimeLogs, getGoalAwards, saveGoalAwards } from '@/utils/storage';
 import VelocityInsights from '@/components/VelocityInsights';
+import GoalAwards from '@/components/GoalAwards';
 import Modal from '@/components/Modal';
+import { checkNewMilestones, getAwardMessage } from '@/utils/goalAwards';
 
 export default function GoalsPage() {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [timeLogs, setTimeLogs] = useState<TimeLog[]>([]);
+  const [goalAwards, setGoalAwards] = useState<GoalAward[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
@@ -28,22 +31,20 @@ export default function GoalsPage() {
     activityIds: [],
   });
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
   const loadData = async () => {
     try {
       setIsLoading(true);
       setError(null);
-      const [goalsData, activitiesData, logsData] = await Promise.all([
+      const [goalsData, activitiesData, logsData, awardsData] = await Promise.all([
         getGoals(),
         getActivities(),
         getTimeLogs(),
+        getGoalAwards(),
       ]);
       setGoals(goalsData);
       setActivities(activitiesData);
       setTimeLogs(logsData);
+      setGoalAwards(awardsData);
     } catch (error) {
       console.error('Error loading goals:', error);
       setError('Failed to load goals');
@@ -51,6 +52,49 @@ export default function GoalsPage() {
       setIsLoading(false);
     }
   };
+
+  const checkAndAwardMilestones = useCallback(async () => {
+    try {
+      const newAwards: GoalAward[] = [];
+      
+      for (const goal of goals) {
+        const goalActivities = activities.filter(a => goal.activityIds.includes(a.id));
+        if (goalActivities.length === 0) continue;
+        
+        const totalTime = goalActivities.reduce((sum, activity) => sum + activity.totalTime, 0);
+        const currentProgress = (totalTime / 60) / goal.targetHours * 100;
+        
+        const existingAwards = goalAwards.filter(award => award.goalId === goal.id);
+        const newMilestones = checkNewMilestones(currentProgress, existingAwards, goal.id);
+        
+        // Update award messages with actual goal name
+        const updatedMilestones = newMilestones.map(award => ({
+          ...award,
+          message: getAwardMessage(award.percentage, goal.name)
+        }));
+        
+        newAwards.push(...updatedMilestones);
+      }
+      
+      if (newAwards.length > 0) {
+        await saveGoalAwards(newAwards);
+        setGoalAwards(prev => [...prev, ...newAwards]);
+      }
+    } catch (error) {
+      console.error('Error checking milestones:', error);
+    }
+  }, [goals, activities, goalAwards]);
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  // Check for new milestones when data changes
+  useEffect(() => {
+    if (goals.length > 0 && activities.length > 0) {
+      checkAndAwardMilestones();
+    }
+  }, [goals, activities, timeLogs, checkAndAwardMilestones]);
 
   const handleCreateGoal = async () => {
     try {
@@ -492,34 +536,18 @@ export default function GoalsPage() {
                 <div className="text-right text-xs text-slate-500">
                   {progress.toFixed(1)}% Complete
                 </div>
-                {/* Milestone badges */}
-                {goalActivities.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-2 items-center justify-end">
-                    {(() => {
-                      const milestones = [100, 500, 1000, 5000, 10000];
-                      const totalHours = Math.floor(goalActivities.reduce((sum, activity) => sum + activity.totalTime, 0) / 60);
-                      let lastAchieved = -1;
-                      milestones.forEach((m, i) => {
-                        if (totalHours >= m) lastAchieved = i;
-                      });
-                      return milestones.map((milestone, i) => (
-                        <span
-                          key={milestone}
-                          className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold border transition-all
-                            ${i === lastAchieved
-                              ? 'bg-green-100 border-green-400 text-green-700 animate-pulse'
-                              : totalHours >= milestone
-                                ? 'bg-green-50 border-green-200 text-green-600'
-                                : 'bg-slate-100 border-slate-200 text-slate-400 opacity-60'}
-                          `}
-                          title={totalHours >= milestone ? `Achieved ${milestone} hours!` : `Reach ${milestone} hours to unlock`}
-                        >
-                          <span role="img" aria-label="milestone">🏅</span> {milestone}h
-                        </span>
-                      ));
-                    })()}
-                  </div>
-                )}
+                
+                {/* Goal Awards */}
+                <div className="mt-3">
+                  <GoalAwards
+                    goal={goal}
+                    activities={activities}
+                    timeLogs={timeLogs}
+                    existingAwards={goalAwards.filter(award => award.goalId === goal.id)}
+                    className="w-full"
+                  />
+                </div>
+                
                 {/* Forecasted completion date */}
                 {(() => {
                   const forecast = getForecastDate(goal);

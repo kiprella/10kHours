@@ -109,7 +109,7 @@ export default function MomentumScore({
             </div>
             <div className="flex justify-between">
               <span className="text-slate-300">Consistency:</span>
-              <span className="font-medium">{Math.round((100 - momentumScore.factors.variance * 10))}/100</span>
+              <span className="font-medium">{Math.round((100 - momentumScore.factors.standardDeviation * 5))}/100</span>
             </div>
             <div className="flex justify-between">
               <span className="text-slate-300">Recent growth:</span>
