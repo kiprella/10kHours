@@ -1,5 +1,5 @@
 import { TimeLog, TimeLogSummary } from '@/types';
-import { getTimeLogs } from './storage';
+import { getValidatedTimeLogs } from './storage';
 
 // Helper function to get ISO week number
 const getISOWeek = (date: Date): { year: number; week: number } => {
@@ -13,7 +13,7 @@ const getISOWeek = (date: Date): { year: number; week: number } => {
 };
 
 export const getTimeLogSummary = async (): Promise<TimeLogSummary> => {
-  const logs = await getTimeLogs();
+  const logs = await getValidatedTimeLogs();
   const dailyLogsMap = new Map<string, TimeLog[]>();
   const weeklyDataMap = new Map<string, number>();
   const monthlyDataMap = new Map<string, number>();

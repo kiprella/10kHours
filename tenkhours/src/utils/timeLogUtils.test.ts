@@ -1,18 +1,18 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
 vi.mock('@/utils/storage', () => ({
-  getTimeLogs: vi.fn(),
+  getValidatedTimeLogs: vi.fn(),
 }));
 
-import { getTimeLogs } from '@/utils/storage';
+import { getValidatedTimeLogs } from '@/utils/storage';
 import { getTimeLogSummary } from '@/utils/timeLogUtils';
 import type { TimeLog } from '@/types';
 
-const mockGetTimeLogs = vi.mocked(getTimeLogs);
+const mockGetValidatedTimeLogs = vi.mocked(getValidatedTimeLogs);
 
 describe('getTimeLogSummary', () => {
   beforeEach(() => {
-    mockGetTimeLogs.mockReset();
+    mockGetValidatedTimeLogs.mockReset();
   });
 
   it('aggregates logs using ISO week numbers', async () => {
@@ -31,7 +31,7 @@ describe('getTimeLogSummary', () => {
       },
     ];
 
-    mockGetTimeLogs.mockResolvedValue(logs);
+    mockGetValidatedTimeLogs.mockResolvedValue(logs);
 
     const summary = await getTimeLogSummary();
     const weeks = summary.weeklyData.map((entry) => entry.week);
